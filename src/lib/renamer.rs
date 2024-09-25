@@ -19,7 +19,7 @@ pub trait Renamer {
 
 impl Renamer for Path {
 	fn add_padded_numbering(&self, pad: usize, n: usize) -> String {
-		format!("{:0pad$}", n)
+		format!("{n:0pad$}")
 	}
 
 	fn get_taken_date(&self) -> Result<String> {
@@ -41,7 +41,7 @@ impl Renamer for Path {
 	fn is_photo(&self) -> bool {
 		matches!(
 			self.to_lowercase_extension().as_deref(),
-			Some("heic") | Some("jpg") | Some("jpeg") | Some("png")
+			Some("heic" | "jpg" | "jpeg" | "png")
 		)
 	}
 
@@ -50,7 +50,7 @@ impl Renamer for Path {
 
 		println!("\n| {:^40} | {:^40} |", "CURRENT", "NEW");
 		let separator = "=".repeat(40);
-		println!("| {:<40} | {:<40} |", separator, separator);
+		println!("| {separator:<40} | {separator:<40} |");
 
 		for entry in fs::read_dir(self)? {
 			let entry = entry?;
@@ -78,7 +78,7 @@ impl Renamer for Path {
 				// rules to create the new name
 				let taken_date = self.get_taken_date().unwrap_or_else(|_| String::from("{}"));
 				let number = self.add_padded_numbering(3, num);
-				let extension = self.to_lowercase_extension().unwrap_or(String::from(""));
+				let extension = self.to_lowercase_extension().unwrap_or_default();
 
 				let new_file_name = format!("{taken_date}_{file_type:?}{number}.{extension}");
 				println!("| {:<40} | {new_file_name:<40} |", old_file_name.to_string_lossy());
@@ -97,6 +97,6 @@ impl Renamer for Path {
 	fn to_lowercase_extension(&self) -> Option<String> {
 		self.extension()
 			.and_then(OsStr::to_str)
-			.map(|ext| ext.to_lowercase())
+			.map(str::to_lowercase)
 	}
 }
