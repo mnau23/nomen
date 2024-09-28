@@ -1,8 +1,8 @@
 use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
 
-#[derive(Clone, Debug, Parser)]
-pub struct NomenConfig {
+#[derive(Debug, Parser)]
+pub struct Args {
 	/// Directory path
 	#[arg(long, env)]
 	pub directory: PathBuf,

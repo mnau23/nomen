@@ -9,7 +9,6 @@ use std::io::BufReader;
 use std::path::Path;
 
 pub trait Renamer {
-	fn add_padded_numbering(&self, pad: usize, n: usize) -> String;
 	fn get_taken_date(&self) -> Result<String>;
 	fn is_photo(&self) -> bool;
 	fn process(&self, types: FileType, dry_run: bool) -> Result<()>;
@@ -18,10 +17,6 @@ pub trait Renamer {
 }
 
 impl Renamer for Path {
-	fn add_padded_numbering(&self, pad: usize, n: usize) -> String {
-		format!("{n:0pad$}")
-	}
-
 	fn get_taken_date(&self) -> Result<String> {
 		let file = File::open(self)?;
 		let mut buf_reader = BufReader::new(&file);
@@ -77,13 +72,13 @@ impl Renamer for Path {
 			if let Some(old_file_name) = self.file_name() {
 				// rules to create the new name
 				let taken_date = self.get_taken_date().unwrap_or_else(|_| String::from("{}"));
-				let number = self.add_padded_numbering(3, num);
+				let number = add_padded_numbering(3, num);
 				let extension = self.to_lowercase_extension().unwrap_or_default();
 
 				let new_file_name = format!("{taken_date}_{file_type:?}{number}.{extension}");
 				println!("| {:<40} | {new_file_name:<40} |", old_file_name.to_string_lossy());
 
-				// apply changes when is not a dry_run
+				// apply changes only if it's not a dry run
 				if !dry_run {
 					let new_file_path = parent_path.join(new_file_name.clone());
 					fs::rename(self, &new_file_path)?;
@@ -99,4 +94,8 @@ impl Renamer for Path {
 			.and_then(OsStr::to_str)
 			.map(str::to_lowercase)
 	}
+}
+
+fn add_padded_numbering(pad: usize, n: usize) -> String {
+	format!("{n:0pad$}")
 }
