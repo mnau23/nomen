@@ -9,10 +9,39 @@ use std::io::BufReader;
 use std::path::Path;
 
 pub trait Renamer {
+	/// Retrieves the original date when an item was taken, based on EXIF data, as a `String`.
+	///
+	/// # Errors
+	///
+	/// This function will return an error if:
+	/// - the file cannot be opened (e.g., the file does not exist or access is denied).
+	/// - the EXIF data cannot be read from the file (e.g., if the file is not a valid image with EXIF data).
+	/// - the `DateTimeOriginal` tag is missing from the EXIF metadata.
+	/// - there is an issue parsing the date from the EXIF metadata (e.g., if the date format is invalid).
 	fn get_taken_date(&self) -> Result<String>;
+
 	fn is_photo(&self) -> bool;
-	fn process(&self, types: FileType, dry_run: bool) -> Result<()>;
+
+	/// Processes files in the directory and renames them based on the given file type.
+	///
+	/// # Errors
+	///
+	/// This function will return an error if:
+	/// - the directory cannot be read (e.g., invalid path or insufficient permissions).
+	/// - an error occurs while reading a directory entry (e.g., invalid file or I/O error).
+	/// - an error occurs during file renaming (e.g., due to filesystem restrictions, permissions issues, or name conflicts).
+	fn process(&self, file_type: FileType, dry_run: bool) -> Result<()>;
+
+	/// Performs the actual renaming of a file and applies the changes when it's not a dry run execution.
+	///
+	/// # Errors
+	///
+	/// This function will return an error if:
+	/// - the directory cannot be read (e.g., invalid path or insufficient permissions).
+	/// - any file entry in the directory cannot be accessed (e.g., due to filesystem issues).
+	/// - an error occurs during file renaming (e.g., due to filesystem restrictions, permissions issues, or name conflicts).
 	fn rename(&self, file_type: FileType, num: usize, dry_run: bool) -> Result<()>;
+
 	fn to_lowercase_extension(&self) -> Option<String>;
 }
 
