@@ -1,7 +1,8 @@
 use crate::models::FileType;
-use anyhow::{bail, Result};
+use anyhow::Result;
 use chrono::NaiveDateTime;
 use exif::{In, Reader, Tag};
+use log::warn;
 use std::ffi::OsStr;
 use std::fs;
 use std::fs::File;
@@ -9,20 +10,34 @@ use std::io::BufReader;
 use std::path::Path;
 
 pub trait Renamer {
-	/// Retrieves the original date when an item was taken, based on EXIF data, as a `String`.
+	/// Retrieves the original date when an item was taken from its EXIF metadata.
+	///
+	/// # Returns
+	///
+	/// - `Ok(String)` containing the date in `YYYY-MM-DD` format if the date is found.
+	/// - `Ok(String)` containing `"NA"` (Not Available) if the EXIF data is unreadable or the tag is absent.
+	/// - `Err` if there is a problem.
 	///
 	/// # Errors
 	///
 	/// This function will return an error if:
 	/// - the file cannot be opened (e.g., the file does not exist or access is denied).
-	/// - the EXIF data cannot be read from the file (e.g., if the file is not a valid image with EXIF data).
-	/// - the `DateTimeOriginal` tag is missing from the EXIF metadata.
 	/// - there is an issue parsing the date from the EXIF metadata (e.g., if the date format is invalid).
 	fn get_taken_date(&self) -> Result<String>;
 
 	fn is_photo(&self) -> bool;
 
-	/// Processes files in the directory and renames them based on the given file type.
+	/// Processes and renames files in the directory based on the specified file type.
+	///
+	/// # Arguments
+	///
+	/// - `file_type`: the type of file to be processed.
+	/// - `dry_run`: if `true`, no actual renaming will occur; the function will only print the intended changes.
+	///
+	/// # Returns
+	///
+	/// - `Ok(())` if all files are processed successfully.
+	/// - `Err` if any error occur during the renaming or file operations.
 	///
 	/// # Errors
 	///
@@ -33,6 +48,17 @@ pub trait Renamer {
 	fn process(&self, file_type: FileType, dry_run: bool) -> Result<()>;
 
 	/// Performs the actual renaming of a file and applies the changes when it's not a dry run execution.
+	///
+	/// # Arguments
+	///
+	/// - `file_type`: the type of file being renamed.
+	/// - `num`: a sequential number to append to the new file name.
+	/// - `dry_run`: if `true`, the renaming operation is simulated - only the intended renaming is printed to the console.
+	///
+	/// # Returns
+	///
+	/// - `Ok(())` if it is a dry run or if the file is renamed successfully.
+	/// - `Err` if any file operation fails.
 	///
 	/// # Errors
 	///
@@ -50,15 +76,19 @@ impl Renamer for Path {
 		let file = File::open(self)?;
 		let mut buf_reader = BufReader::new(&file);
 		let exif_reader = Reader::new();
-		let exif_data = exif_reader.read_from_container(&mut buf_reader)?;
 
-		match exif_data.get_field(Tag::DateTimeOriginal, In::PRIMARY) {
-			Some(field) => {
-				let value = field.display_value().with_unit(&exif_data);
-				let date = NaiveDateTime::parse_from_str(&value.to_string(), "%Y-%m-%d %H:%M:%S")?.date();
-				Ok(date.to_string())
-			}
-			None => bail!("Missing DateTimeOriginal tag"),
+		let Ok(exif_data) = exif_reader.read_from_container(&mut buf_reader) else {
+			warn!("Unable to read EXIF data from: {}", self.display());
+			return Ok("NA".to_string());
+		};
+
+		if let Some(field) = exif_data.get_field(Tag::DateTime, In::PRIMARY) {
+			let value = field.display_value().with_unit(&exif_data);
+			let date = NaiveDateTime::parse_from_str(&value.to_string(), "%Y-%m-%d %H:%M:%S")?.date();
+			Ok(date.to_string())
+		} else {
+			warn!("Missing DateTimeOriginal tag");
+			Ok("NA".to_string())
 		}
 	}
 
@@ -100,7 +130,7 @@ impl Renamer for Path {
 		if let Some(parent_path) = self.parent() {
 			if let Some(old_file_name) = self.file_name() {
 				// rules to create the new name
-				let taken_date = self.get_taken_date().unwrap_or_else(|_| String::from("{}"));
+				let taken_date = self.get_taken_date()?;
 				let number = add_padded_numbering(3, num);
 				let extension = self.to_lowercase_extension().unwrap_or_default();
 
