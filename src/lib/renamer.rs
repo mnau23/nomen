@@ -50,11 +50,11 @@ impl Renamer for Path {
 		let file = File::open(self)?;
 		let mut buf_reader = BufReader::new(&file);
 		let exif_reader = Reader::new();
-		let exif = exif_reader.read_from_container(&mut buf_reader)?;
+		let exif_data = exif_reader.read_from_container(&mut buf_reader)?;
 
-		match exif.get_field(Tag::DateTimeOriginal, In::PRIMARY) {
+		match exif_data.get_field(Tag::DateTimeOriginal, In::PRIMARY) {
 			Some(field) => {
-				let value = field.display_value().with_unit(&exif);
+				let value = field.display_value().with_unit(&exif_data);
 				let date = NaiveDateTime::parse_from_str(&value.to_string(), "%Y-%m-%d %H:%M:%S")?.date();
 				Ok(date.to_string())
 			}
@@ -70,14 +70,14 @@ impl Renamer for Path {
 	}
 
 	fn process(&self, file_type: FileType, dry_run: bool) -> Result<()> {
+		print_header();
+
+		// collect all entries, filter out any invalid ones, then sort by current file name
+		let mut entries: Vec<_> = fs::read_dir(self)?.filter_map(Result::ok).collect();
+		entries.sort_by_key(fs::DirEntry::file_name);
+
 		let mut counter = 1;
-
-		println!("\n| {:^40} | {:^40} |", "CURRENT", "NEW");
-		let separator = "=".repeat(40);
-		println!("| {separator:<40} | {separator:<40} |");
-
-		for entry in fs::read_dir(self)? {
-			let entry = entry?;
+		for entry in entries {
 			let file_path: &Path = &entry.path();
 
 			if file_path.is_file() {
@@ -127,4 +127,10 @@ impl Renamer for Path {
 
 fn add_padded_numbering(pad: usize, n: usize) -> String {
 	format!("{n:0pad$}")
+}
+
+fn print_header() {
+	println!("\n| {:^40} | {:^40} |", "CURRENT", "NEW");
+	let separator = "=".repeat(40);
+	println!("| {separator:<40} | {separator:<40} |");
 }

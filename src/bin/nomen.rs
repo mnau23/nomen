@@ -10,7 +10,7 @@ use std::path::Path;
 fn main() -> Result<()> {
 	env_logger::init();
 	let args = Args::parse();
-	debug!("Input args: {args:?}");
+	debug!("Input: {args:?}");
 
 	let directory: &Path = &args.directory;
 	// make sure the path is a valid directory
@@ -19,9 +19,9 @@ fn main() -> Result<()> {
 	}
 
 	if args.dry_run {
-		info!("🎉 This is a dry run: no changes will be made.");
+		info!("🦺 This is a dry run: no changes will be made.");
 	} else {
-		info!("⚠️ Running program: changes will be applied.");
+		info!("🚨 Running program: changes will be applied.");
 	}
 
 	directory.process(args.file_type, args.dry_run)?;
