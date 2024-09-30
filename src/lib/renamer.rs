@@ -1,0 +1,157 @@
+use crate::helpers::{add_padded_numbering, print_header};
+use crate::models::FileType;
+use anyhow::Result;
+use chrono::NaiveDateTime;
+use exif::{In, Reader, Tag};
+use log::warn;
+use std::ffi::OsStr;
+use std::fs;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::Path;
+
+pub trait Renamer {
+	/// Retrieves the original date when an item was taken from its EXIF metadata.
+	///
+	/// # Returns
+	///
+	/// - `Ok(String)` containing the date in `YYYY-MM-DD` format if the date is found.
+	/// - `Ok(String)` containing `"NA"` (Not Available) if the EXIF data is unreadable or the tag is absent.
+	/// - `Err` if there is a problem.
+	///
+	/// # Errors
+	///
+	/// This function will return an error if:
+	/// - the file cannot be opened (e.g., the file does not exist or access is denied).
+	/// - there is an issue parsing the date from the EXIF metadata (e.g., if the date format is invalid).
+	fn get_taken_date(&self) -> Result<String>;
+
+	fn is_photo(&self) -> bool;
+
+	/// Processes and renames files in the directory based on the specified file type.
+	///
+	/// # Arguments
+	///
+	/// - `file_type`: the type of file to be processed.
+	/// - `dry_run`: if `true`, no actual renaming will occur; the function will only print the intended changes.
+	///
+	/// # Returns
+	///
+	/// - `Ok(())` if all files are processed successfully.
+	/// - `Err` if any error occur during the renaming or file operations.
+	///
+	/// # Errors
+	///
+	/// This function will return an error if:
+	/// - the directory cannot be read (e.g., invalid path or insufficient permissions).
+	/// - an error occurs while reading a directory entry (e.g., invalid file or I/O error).
+	/// - an error occurs during file renaming (e.g., due to filesystem restrictions, permissions issues, or name conflicts).
+	fn process(&self, file_type: FileType, dry_run: bool) -> Result<()>;
+
+	/// Performs the actual renaming of a file and applies the changes when it's not a dry run execution.
+	///
+	/// # Arguments
+	///
+	/// - `file_type`: the type of file being renamed.
+	/// - `num`: a sequential number to append to the new file name.
+	/// - `dry_run`: if `true`, the renaming operation is simulated - only the intended renaming is printed to the console.
+	///
+	/// # Returns
+	///
+	/// - `Ok(())` if it is a dry run or if the file is renamed successfully.
+	/// - `Err` if any file operation fails.
+	///
+	/// # Errors
+	///
+	/// This function will return an error if:
+	/// - the directory cannot be read (e.g., invalid path or insufficient permissions).
+	/// - any file entry in the directory cannot be accessed (e.g., due to filesystem issues).
+	/// - an error occurs during file renaming (e.g., due to filesystem restrictions, permissions issues, or name conflicts).
+	fn rename(&self, file_type: FileType, num: usize, dry_run: bool) -> Result<()>;
+
+	fn to_lowercase_extension(&self) -> Option<String>;
+}
+
+impl Renamer for Path {
+	fn get_taken_date(&self) -> Result<String> {
+		let file = File::open(self)?;
+		let mut buf_reader = BufReader::new(&file);
+		let exif_reader = Reader::new();
+
+		let Ok(exif_data) = exif_reader.read_from_container(&mut buf_reader) else {
+			warn!("Unable to read EXIF data from: {}", self.display());
+			return Ok("NA".to_string());
+		};
+
+		if let Some(field) = exif_data.get_field(Tag::DateTime, In::PRIMARY) {
+			let value = field.display_value().with_unit(&exif_data);
+			let date = NaiveDateTime::parse_from_str(&value.to_string(), "%Y-%m-%d %H:%M:%S")?.date();
+			Ok(date.to_string())
+		} else {
+			warn!("Missing DateTimeOriginal tag");
+			Ok("NA".to_string())
+		}
+	}
+
+	fn is_photo(&self) -> bool {
+		matches!(
+			self.to_lowercase_extension().as_deref(),
+			Some("heic" | "jpg" | "jpeg" | "png")
+		)
+	}
+
+	fn process(&self, file_type: FileType, dry_run: bool) -> Result<()> {
+		print_header();
+
+		// collect all entries, filter out any invalid ones, then sort by current file name
+		let mut entries: Vec<_> = fs::read_dir(self)?.filter_map(Result::ok).collect();
+		entries.sort_by_key(fs::DirEntry::file_name);
+
+		let mut counter = 1;
+		for entry in entries {
+			let file_path: &Path = &entry.path();
+
+			if file_path.is_file() {
+				match file_type {
+					FileType::Photo => {
+						if file_path.is_photo() {
+							file_path.rename(file_type, counter, dry_run)?;
+							counter += 1;
+						}
+					}
+				}
+			}
+		}
+
+		println!();
+		Ok(())
+	}
+
+	fn rename(&self, file_type: FileType, num: usize, dry_run: bool) -> Result<()> {
+		if let Some(parent_path) = self.parent() {
+			if let Some(old_file_name) = self.file_name() {
+				// rules to create the new name
+				let taken_date = self.get_taken_date()?;
+				let number = add_padded_numbering(3, num);
+				let extension = self.to_lowercase_extension().unwrap_or_default();
+
+				let new_file_name = format!("{taken_date}_{file_type:?}{number}.{extension}");
+				println!("| {:<40} | {new_file_name:<40} |", old_file_name.to_string_lossy());
+
+				// apply changes only if it's not a dry run
+				if !dry_run {
+					let new_file_path = parent_path.join(new_file_name.clone());
+					fs::rename(self, &new_file_path)?;
+				}
+			}
+		}
+
+		Ok(())
+	}
+
+	fn to_lowercase_extension(&self) -> Option<String> {
+		self.extension()
+			.and_then(OsStr::to_str)
+			.map(str::to_lowercase)
+	}
+}
