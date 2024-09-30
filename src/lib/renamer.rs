@@ -1,3 +1,4 @@
+use crate::helpers::{add_padded_numbering, print_header};
 use crate::models::FileType;
 use anyhow::Result;
 use chrono::NaiveDateTime;
@@ -153,14 +154,4 @@ impl Renamer for Path {
 			.and_then(OsStr::to_str)
 			.map(str::to_lowercase)
 	}
-}
-
-fn add_padded_numbering(pad: usize, n: usize) -> String {
-	format!("{n:0pad$}")
-}
-
-fn print_header() {
-	println!("\n| {:^40} | {:^40} |", "CURRENT", "NEW");
-	let separator = "=".repeat(40);
-	println!("| {separator:<40} | {separator:<40} |");
 }
