@@ -1,7 +1,7 @@
 use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
 
-/// Processes and renames files in the directory based on the specified file type.
+/// Processes and renames files in a directory based on the specified file type.
 #[derive(Debug, Parser)]
 pub struct Args {
 	/// Directory path
@@ -12,7 +12,7 @@ pub struct Args {
 	#[arg(long)]
 	pub file_type: FileType,
 
-	/// Use to disable dry run
+	/// Use to disable dry run (active by default)
 	// by default, the action selected is ArgAction::SetTrue
 	#[arg(long = "no-dry-run", action = clap::ArgAction::SetFalse)]
 	pub dry_run: bool,

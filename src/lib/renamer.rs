@@ -28,7 +28,7 @@ pub trait Renamer {
 
 	fn is_photo(&self) -> bool;
 
-	/// Processes and renames files in the directory based on the specified file type.
+	/// Processes and renames files in a directory based on the specified file type.
 	///
 	/// # Arguments
 	///
