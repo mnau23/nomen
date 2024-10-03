@@ -8,16 +8,16 @@
 
 ## Usage
 
-It is possible to execute the command within the directory containing the files to be renamed. An example of use is:
+It is possible to execute the program within the directory containing the files to be renamed. An example of use is:
 
 ```sh
 nomen --directory . --file-type photo
 ```
 
-The default behaviour is the execution of the program in a dry run mode: this means no renaming will be applied.
+The default behaviour is the execution in a dry run mode: this means no renaming will be applied.
 Only a preview of the execution results will be shown.
 
-To disable the dry run mode, add to the previous command an option as below.
+To disable the dry run mode, add an option to the previous command, as below.
 
 ```sh
 nomen --directory . --file-type photo --no-dry-run
