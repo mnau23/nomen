@@ -1,6 +1,7 @@
 use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
 
+/// Reads all files in a directory and renames the photos with a specified format.
 #[derive(Debug, Parser)]
 pub struct Args {
 	/// Directory path
@@ -12,7 +13,8 @@ pub struct Args {
 	pub file_type: FileType,
 
 	/// Perform a dry run
-	#[arg(long, env, default_value = "true")]
+	#[arg(long = "dry-run", default_value_t = true, action = clap::ArgAction::SetTrue)]
+	#[arg(long = "no-dry-run", action = clap::ArgAction::SetFalse)]
 	pub dry_run: bool,
 }
 
