@@ -3,22 +3,22 @@
 ## Installation
 
 - Clone the repository locally.
-- Run `cargo install --path .` to compile and install the executable.
-  - It will be installed under `/.cargo/bin`.
+- Run `cargo install --path .` to compile and install the executable: it will be installed under `/.cargo/bin`.
 - Run `nomen --help` from any directory to read the usage instructions.
 
 ## Usage
 
-It is possible to execute the command within the directory with the files to be renamed.  An example of use is:
+It is possible to execute the command within the directory containing the files to be renamed. An example of use is:
 
 ```sh
 nomen --directory . --file-type photo
 ```
 
-In this case, since `dry-run` is not specified, it defaults to `true`, so no renaming will be applied. Otherwise, run:
+The default behaviour is the execution of the program in a dry run mode: this means no renaming will be applied.
+Only a preview of the execution results will be shown.
+
+To disable the dry run mode, add to the previous command an option as below.
 
 ```sh
 nomen --directory . --file-type photo --dry-run false
 ```
-
-If interested in looking at the logs, prepend `RUST_LOG=debug` before the `nomen` command.
