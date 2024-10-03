@@ -20,5 +20,5 @@ Only a preview of the execution results will be shown.
 To disable the dry run mode, add to the previous command an option as below.
 
 ```sh
-nomen --directory . --file-type photo --dry-run false
+nomen --directory . --file-type photo --no-dry-run
 ```
