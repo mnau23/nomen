@@ -2,7 +2,7 @@
 
 use anyhow::{bail, Result};
 use clap::Parser;
-use log::{debug, info};
+use log::debug;
 use nomen::models::Args;
 use nomen::renamer::Renamer;
 use std::path::Path;
@@ -19,13 +19,13 @@ fn main() -> Result<()> {
 	}
 
 	if args.dry_run {
-		info!("🦺 This is a dry run: no changes will be made.");
+		println!("🦺 This is a dry run: no changes will be made.");
 	} else {
-		info!("🚨 Running program: changes will be applied.");
+		println!("🚨 Running program: changes will be applied.");
 	}
 
 	directory.process(args.file_type, args.dry_run)?;
 
-	info!("✅  Process completed!");
+	println!("✅  Process completed!");
 	Ok(())
 }
