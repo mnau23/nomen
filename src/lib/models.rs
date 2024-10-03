@@ -1,19 +1,19 @@
 use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
 
-/// Reads all files in a directory and renames the photos with a specified format.
+/// Processes and renames files in the directory based on the specified file type.
 #[derive(Debug, Parser)]
 pub struct Args {
 	/// Directory path
-	#[arg(long, env)]
+	#[arg(long)]
 	pub directory: PathBuf,
 
 	/// File type to convert
-	#[arg(long, env)]
+	#[arg(long)]
 	pub file_type: FileType,
 
-	/// Perform a dry run
-	#[arg(long = "dry-run", default_value_t = true, action = clap::ArgAction::SetTrue)]
+	/// Use to disable dry run
+	// by default, the action selected is ArgAction::SetTrue
 	#[arg(long = "no-dry-run", action = clap::ArgAction::SetFalse)]
 	pub dry_run: bool,
 }
