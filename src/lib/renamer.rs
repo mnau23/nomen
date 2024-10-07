@@ -6,7 +6,6 @@ use exif::{In, Reader, Tag};
 use log::warn;
 use std::ffi::OsStr;
 use std::fs;
-use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 
@@ -27,6 +26,8 @@ pub trait Renamer {
 	fn get_taken_date(&self) -> Result<String>;
 
 	fn is_photo(&self) -> bool;
+
+	fn is_video(&self) -> bool;
 
 	/// Processes and renames files in a directory based on the specified file type.
 	///
@@ -74,7 +75,7 @@ pub trait Renamer {
 
 impl Renamer for Path {
 	fn get_taken_date(&self) -> Result<String> {
-		let file = File::open(self)?;
+		let file = fs::File::open(self)?;
 		let mut buf_reader = BufReader::new(&file);
 		let exif_reader = Reader::new();
 
@@ -100,6 +101,10 @@ impl Renamer for Path {
 		)
 	}
 
+	fn is_video(&self) -> bool {
+		matches!(self.to_lowercase_extension().as_deref(), Some("avi" | "mov" | "mp4"))
+	}
+
 	fn process(&self, file_type: FileType, dry_run: bool) -> Result<()> {
 		print_header();
 
@@ -107,7 +112,8 @@ impl Renamer for Path {
 		let mut entries: Vec<_> = fs::read_dir(self)?.filter_map(Result::ok).collect();
 		entries.sort_by_key(fs::DirEntry::file_name);
 
-		let mut counter = 1;
+		let mut img_counter = 1;
+		let mut vid_counter = 1;
 		for entry in entries {
 			let file_path: &Path = &entry.path();
 
@@ -115,8 +121,14 @@ impl Renamer for Path {
 				match file_type {
 					FileType::Photo => {
 						if file_path.is_photo() {
-							file_path.rename(file_type, counter, dry_run)?;
-							counter += 1;
+							file_path.rename(file_type, img_counter, dry_run)?;
+							img_counter += 1;
+						}
+					}
+					FileType::Video => {
+						if file_path.is_video() {
+							file_path.rename(file_type, vid_counter, dry_run)?;
+							vid_counter += 1;
 						}
 					}
 				}

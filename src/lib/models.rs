@@ -21,4 +21,5 @@ pub struct Args {
 #[derive(Clone, Copy, Debug, ValueEnum)]
 pub enum FileType {
 	Photo,
+	Video,
 }
