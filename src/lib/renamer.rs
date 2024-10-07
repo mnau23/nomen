@@ -23,7 +23,9 @@ pub trait Renamer {
 	/// This function will return an error if:
 	/// - the file cannot be opened (e.g., the file does not exist or access is denied).
 	/// - there is an issue parsing the date from the EXIF metadata (e.g., if the date format is invalid).
-	fn get_taken_date(&self) -> Result<String>;
+	fn get_date_from_photo(&self) -> Result<String>;
+
+	fn get_date_from_video(&self) -> Result<String>;
 
 	fn is_photo(&self) -> bool;
 
@@ -74,7 +76,7 @@ pub trait Renamer {
 }
 
 impl Renamer for Path {
-	fn get_taken_date(&self) -> Result<String> {
+	fn get_date_from_photo(&self) -> Result<String> {
 		let file = fs::File::open(self)?;
 		let mut buf_reader = BufReader::new(&file);
 		let exif_reader = Reader::new();
@@ -90,6 +92,18 @@ impl Renamer for Path {
 			Ok(date.to_string())
 		} else {
 			warn!("Missing DateTimeOriginal tag");
+			Ok("NA".to_string())
+		}
+	}
+
+	fn get_date_from_video(&self) -> Result<String> {
+		let context = ffmpeg_next::format::input(&self)?;
+
+		if let Some(taken_date) = context.metadata().get("creation_time") {
+			let date = NaiveDateTime::parse_from_str(taken_date, "%Y-%m-%dT%H:%M:%S%.fZ")?.date();
+			Ok(date.to_string())
+		} else {
+			warn!("Missing creation_time tag");
 			Ok("NA".to_string())
 		}
 	}
@@ -121,13 +135,13 @@ impl Renamer for Path {
 				match file_type {
 					FileType::Photo => {
 						if file_path.is_photo() {
-							file_path.rename(file_type, img_counter, dry_run)?;
+							file_path.rename(FileType::Photo, img_counter, dry_run)?;
 							img_counter += 1;
 						}
 					}
 					FileType::Video => {
 						if file_path.is_video() {
-							file_path.rename(file_type, vid_counter, dry_run)?;
+							file_path.rename(FileType::Video, vid_counter, dry_run)?;
 							vid_counter += 1;
 						}
 					}
@@ -143,7 +157,10 @@ impl Renamer for Path {
 		if let Some(parent_path) = self.parent() {
 			if let Some(old_file_name) = self.file_name() {
 				// rules to create the new name
-				let taken_date = self.get_taken_date()?;
+				let taken_date = match file_type {
+					FileType::Photo => self.get_date_from_photo()?,
+					FileType::Video => self.get_date_from_video()?,
+				};
 				let number = add_padded_numbering(3, num);
 				let extension = self.to_lowercase_extension().unwrap_or_default();
 
