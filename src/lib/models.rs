@@ -1,3 +1,5 @@
+use anyhow::anyhow;
+use chrono::NaiveDateTime;
 use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
 
@@ -22,4 +24,15 @@ pub struct Args {
 pub enum FileType {
 	Photo,
 	Video,
+}
+
+pub(crate) struct DateString;
+
+impl DateString {
+	pub(crate) fn parse_and_format(date_str: &str) -> anyhow::Result<String> {
+		NaiveDateTime::parse_from_str(date_str, "%Y-%m-%d %H:%M:%S")
+			.or_else(|_| NaiveDateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%S%.fZ"))
+			.map(|dt| dt.date().to_string())
+			.map_err(|_| anyhow!("Failed to parse and format date: {date_str}"))
+	}
 }
