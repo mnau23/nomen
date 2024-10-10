@@ -23,6 +23,17 @@ pub trait Renamer {
 	/// - there is an issue parsing the date from the EXIF metadata (e.g., if the date format is invalid).
 	fn get_date_from_photo(&self) -> anyhow::Result<String>;
 
+	/// Retrieves the creation date from its metadata.
+	///
+	/// # Returns
+	///
+	/// - `Ok(String)` containing the date in `YYYY-MM-DD` format if the date is found.
+	/// - `Ok(String)` containing `"NA"` (Not Available) if the tag is absent.
+	/// - `Err` if there is a problem.
+	///
+	/// # Errors
+	///
+	/// Returns an `anyhow::Error` if there is an issue accessing or reading the video file.
 	fn get_date_from_video(&self) -> anyhow::Result<String>;
 
 	fn is_photo(&self) -> bool;
