@@ -1,12 +1,9 @@
 use crate::helpers::{add_padded_numbering, print_header};
-use crate::models::FileType;
-use anyhow::Result;
-use chrono::NaiveDateTime;
+use crate::models::{DateString, FileType};
 use exif::{In, Reader, Tag};
 use log::warn;
 use std::ffi::OsStr;
 use std::fs;
-use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 
@@ -24,9 +21,24 @@ pub trait Renamer {
 	/// This function will return an error if:
 	/// - the file cannot be opened (e.g., the file does not exist or access is denied).
 	/// - there is an issue parsing the date from the EXIF metadata (e.g., if the date format is invalid).
-	fn get_taken_date(&self) -> Result<String>;
+	fn get_date_from_photo(&self) -> anyhow::Result<String>;
+
+	/// Retrieves the creation date from its metadata.
+	///
+	/// # Returns
+	///
+	/// - `Ok(String)` containing the date in `YYYY-MM-DD` format if the date is found.
+	/// - `Ok(String)` containing `"NA"` (Not Available) if the tag is absent.
+	/// - `Err` if there is a problem.
+	///
+	/// # Errors
+	///
+	/// Returns an `anyhow::Error` if there is an issue accessing or reading the video file.
+	fn get_date_from_video(&self) -> anyhow::Result<String>;
 
 	fn is_photo(&self) -> bool;
+
+	fn is_video(&self) -> bool;
 
 	/// Processes and renames files in a directory based on the specified file type.
 	///
@@ -46,7 +58,7 @@ pub trait Renamer {
 	/// - the directory cannot be read (e.g., invalid path or insufficient permissions).
 	/// - an error occurs while reading a directory entry (e.g., invalid file or I/O error).
 	/// - an error occurs during file renaming (e.g., due to filesystem restrictions, permissions issues, or name conflicts).
-	fn process(&self, file_type: FileType, dry_run: bool) -> Result<()>;
+	fn process(&self, file_type: FileType, dry_run: bool) -> anyhow::Result<()>;
 
 	/// Performs the actual renaming of a file and applies the changes when it's not a dry run execution.
 	///
@@ -67,14 +79,14 @@ pub trait Renamer {
 	/// - the directory cannot be read (e.g., invalid path or insufficient permissions).
 	/// - any file entry in the directory cannot be accessed (e.g., due to filesystem issues).
 	/// - an error occurs during file renaming (e.g., due to filesystem restrictions, permissions issues, or name conflicts).
-	fn rename(&self, file_type: FileType, num: usize, dry_run: bool) -> Result<()>;
+	fn rename(&self, file_type: FileType, num: usize, dry_run: bool) -> anyhow::Result<()>;
 
 	fn to_lowercase_extension(&self) -> Option<String>;
 }
 
 impl Renamer for Path {
-	fn get_taken_date(&self) -> Result<String> {
-		let file = File::open(self)?;
+	fn get_date_from_photo(&self) -> anyhow::Result<String> {
+		let file = fs::File::open(self)?;
 		let mut buf_reader = BufReader::new(&file);
 		let exif_reader = Reader::new();
 
@@ -85,10 +97,20 @@ impl Renamer for Path {
 
 		if let Some(field) = exif_data.get_field(Tag::DateTime, In::PRIMARY) {
 			let value = field.display_value().with_unit(&exif_data);
-			let date = NaiveDateTime::parse_from_str(&value.to_string(), "%Y-%m-%d %H:%M:%S")?.date();
-			Ok(date.to_string())
+			DateString::parse_and_format(&value.to_string())
 		} else {
 			warn!("Missing DateTimeOriginal tag");
+			Ok("NA".to_string())
+		}
+	}
+
+	fn get_date_from_video(&self) -> anyhow::Result<String> {
+		let context = ffmpeg_next::format::input(&self)?;
+
+		if let Some(taken_date) = context.metadata().get("creation_time") {
+			DateString::parse_and_format(taken_date)
+		} else {
+			warn!("Missing creation_time tag");
 			Ok("NA".to_string())
 		}
 	}
@@ -100,14 +122,19 @@ impl Renamer for Path {
 		)
 	}
 
-	fn process(&self, file_type: FileType, dry_run: bool) -> Result<()> {
+	fn is_video(&self) -> bool {
+		matches!(self.to_lowercase_extension().as_deref(), Some("avi" | "mov" | "mp4"))
+	}
+
+	fn process(&self, file_type: FileType, dry_run: bool) -> anyhow::Result<()> {
 		print_header();
 
 		// collect all entries, filter out any invalid ones, then sort by current file name
 		let mut entries: Vec<_> = fs::read_dir(self)?.filter_map(Result::ok).collect();
 		entries.sort_by_key(fs::DirEntry::file_name);
 
-		let mut counter = 1;
+		let mut img_counter = 1;
+		let mut vid_counter = 1;
 		for entry in entries {
 			let file_path: &Path = &entry.path();
 
@@ -115,8 +142,14 @@ impl Renamer for Path {
 				match file_type {
 					FileType::Photo => {
 						if file_path.is_photo() {
-							file_path.rename(file_type, counter, dry_run)?;
-							counter += 1;
+							file_path.rename(FileType::Photo, img_counter, dry_run)?;
+							img_counter += 1;
+						}
+					}
+					FileType::Video => {
+						if file_path.is_video() {
+							file_path.rename(FileType::Video, vid_counter, dry_run)?;
+							vid_counter += 1;
 						}
 					}
 				}
@@ -127,11 +160,14 @@ impl Renamer for Path {
 		Ok(())
 	}
 
-	fn rename(&self, file_type: FileType, num: usize, dry_run: bool) -> Result<()> {
+	fn rename(&self, file_type: FileType, num: usize, dry_run: bool) -> anyhow::Result<()> {
 		if let Some(parent_path) = self.parent() {
 			if let Some(old_file_name) = self.file_name() {
 				// rules to create the new name
-				let taken_date = self.get_taken_date()?;
+				let taken_date = match file_type {
+					FileType::Photo => self.get_date_from_photo()?,
+					FileType::Video => self.get_date_from_video()?,
+				};
 				let number = add_padded_numbering(3, num);
 				let extension = self.to_lowercase_extension().unwrap_or_default();
 

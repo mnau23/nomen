@@ -9,6 +9,8 @@ use std::path::Path;
 
 fn main() -> Result<()> {
 	env_logger::init();
+	ffmpeg_next::init()?;
+
 	let args = Args::parse();
 	debug!("Input: {args:?}");
 
