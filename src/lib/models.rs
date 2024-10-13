@@ -11,7 +11,7 @@ pub struct Args {
 	pub directory: PathBuf,
 
 	/// File type to convert
-	#[arg(long)]
+	#[arg(long, default_value = "all")]
 	pub file_type: FileType,
 
 	/// Use to disable dry run (active by default)
@@ -22,6 +22,7 @@ pub struct Args {
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
 pub enum FileType {
+	All,
 	Photo,
 	Video,
 }

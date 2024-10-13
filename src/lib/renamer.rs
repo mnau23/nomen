@@ -152,6 +152,15 @@ impl Renamer for Path {
 							vid_counter += 1;
 						}
 					}
+					FileType::All => {
+						if file_path.is_photo() {
+							file_path.rename(FileType::Photo, img_counter, dry_run)?;
+							img_counter += 1;
+						} else if file_path.is_video() {
+							file_path.rename(FileType::Video, vid_counter, dry_run)?;
+							vid_counter += 1;
+						}
+					}
 				}
 			}
 		}
@@ -167,6 +176,7 @@ impl Renamer for Path {
 				let taken_date = match file_type {
 					FileType::Photo => self.get_date_from_photo()?,
 					FileType::Video => self.get_date_from_video()?,
+					_ => unreachable!()
 				};
 				let number = add_padded_numbering(3, num);
 				let extension = self.to_lowercase_extension().unwrap_or_default();
