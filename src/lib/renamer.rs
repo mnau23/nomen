@@ -139,28 +139,27 @@ impl Renamer for Path {
 			let file_path: &Path = &entry.path();
 
 			if file_path.is_file() {
+				let rename = |file_type, counter: &mut usize| -> anyhow::Result<()> {
+					file_path.rename(file_type, *counter, dry_run)?;
+					*counter += 1;
+					Ok(())
+				};
+
 				match file_type {
-					FileType::Photo => {
-						if file_path.is_photo() {
-							file_path.rename(FileType::Photo, img_counter, dry_run)?;
-							img_counter += 1;
-						}
+					FileType::Photo if file_path.is_photo() => {
+						rename(FileType::Photo, &mut img_counter)?;
 					}
-					FileType::Video => {
-						if file_path.is_video() {
-							file_path.rename(FileType::Video, vid_counter, dry_run)?;
-							vid_counter += 1;
-						}
+					FileType::Video if file_path.is_video() => {
+						rename(FileType::Video, &mut vid_counter)?;
 					}
 					FileType::All => {
 						if file_path.is_photo() {
-							file_path.rename(FileType::Photo, img_counter, dry_run)?;
-							img_counter += 1;
+							rename(FileType::Photo, &mut img_counter)?;
 						} else if file_path.is_video() {
-							file_path.rename(FileType::Video, vid_counter, dry_run)?;
-							vid_counter += 1;
+							rename(FileType::Video, &mut vid_counter)?;
 						}
 					}
+					_ => unreachable!("Unexpected match"),
 				}
 			}
 		}
@@ -176,7 +175,7 @@ impl Renamer for Path {
 				let taken_date = match file_type {
 					FileType::Photo => self.get_date_from_photo()?,
 					FileType::Video => self.get_date_from_video()?,
-					_ => unreachable!(),
+					_ => unreachable!("Unexpected file type"),
 				};
 				let number = add_padded_numbering(3, num);
 				let extension = self.to_lowercase_extension().unwrap_or_default();
