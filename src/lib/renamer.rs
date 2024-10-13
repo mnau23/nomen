@@ -175,7 +175,7 @@ impl Renamer for Path {
 				let taken_date = match file_type {
 					FileType::Photo => self.get_date_from_photo()?,
 					FileType::Video => self.get_date_from_video()?,
-					_ => unreachable!("Unexpected file type"),
+					FileType::All => unreachable!("\"all\" should not be passed here"),
 				};
 				let number = add_padded_numbering(3, num);
 				let extension = self.to_lowercase_extension().unwrap_or_default();
