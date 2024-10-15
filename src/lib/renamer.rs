@@ -203,20 +203,15 @@ impl Renamer for Path {
 
 #[cfg(test)]
 mod tests {
-	use crate::renamer::Renamer;
 	use std::path::Path;
+	use crate::renamer::Renamer;
+	use test_case::test_case;
 
-	#[test]
-	fn test_to_lowercase_extension() {
-		let correct_path = Path::new("/random/directory/IMG_1234.HEIC");
-		let correct_path_lower = Path::new("file.txt");
-		let missing_extension = Path::new("file");
-
-		assert_eq!(correct_path.to_lowercase_extension(), Some("heic".to_string()));
-		assert_eq!(
-			correct_path_lower.to_lowercase_extension(),
-			Some("txt".to_string())
-		);
-		assert_eq!(missing_extension.to_lowercase_extension(), None);
+	#[test_case("/random/directory/IMG_1234.HEIC", Some("heic".to_string()); "uppercase extension")]
+	#[test_case("/path/avideo.mov", Some("mov".to_string()); "lowercase extension")]
+	#[test_case("file", None; "no extension")]
+	fn test_to_lowercase_extension(path_str: &str, expected: Option<String>) {
+		let path = Path::new(path_str);
+		assert_eq!(path.to_lowercase_extension(), expected);
 	}
 }
