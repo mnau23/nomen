@@ -38,4 +38,18 @@ impl DateString {
 	}
 }
 
-// TODO: add test for DateString
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use test_case::test_case;
+
+	#[test_case("2024-10-16 12:34:56", Ok("2024-10-16".to_string()); "space separated datetime")]
+	#[test_case("2024-10-16T12:34:56.123Z", Ok("2024-10-16".to_string()); "T separator with fractional seconds")]
+	#[test_case("2024-10", Err("Failed to parse and format date: 2024-10".to_string()); "invalid datetime")]
+	fn test_parse_and_format(input: &str, expected: Result<String, String>) {
+		let result = DateString::parse_and_format(input)
+			.map_err(|e| e.to_string());
+
+		assert_eq!(result, expected);
+	}
+}

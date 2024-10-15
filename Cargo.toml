@@ -13,5 +13,8 @@ ffmpeg-next = "7.1.0"
 kamadak-exif = "0.5.5"
 log = "0.4.22"
 
+[dev-dependencies]
+test-case = "3.3"
+
 [lib]
 path = "src/lib/mod.rs"
