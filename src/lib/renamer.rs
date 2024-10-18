@@ -200,3 +200,36 @@ impl Renamer for Path {
 			.map(str::to_lowercase)
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use crate::renamer::Renamer;
+	use std::path::Path;
+	use test_case::test_case;
+
+	#[test_case("/random/directory/file.HEIC", true)]
+	#[test_case("file.jpg", true)]
+	#[test_case("/random/directory/file.GIF", false)]
+	#[test_case("/random/directory/file.pdf", false)]
+	fn test_is_photo(path_str: &str, expected: bool) {
+		let path = Path::new(path_str);
+		assert_eq!(path.is_photo(), expected, "Unexpected result for: {path_str}");
+	}
+
+	#[test_case("/random/directory/file.mp4", true)]
+	#[test_case("file.MOV", true)]
+	#[test_case("/random/directory/file.PNG", false)]
+	#[test_case("filetxt", false)]
+	fn test_is_video(path_str: &str, expected: bool) {
+		let path = Path::new(path_str);
+		assert_eq!(path.is_video(), expected, "Unexpected result for: {path_str}");
+	}
+
+	#[test_case("/random/directory/IMG_1234.HEIC", Some("heic".to_string()); "uppercase extension")]
+	#[test_case("/path/avideo.mov", Some("mov".to_string()); "lowercase extension")]
+	#[test_case("file", None; "no extension")]
+	fn test_to_lowercase_extension(path_str: &str, expected: Option<String>) {
+		let path = Path::new(path_str);
+		assert_eq!(path.to_lowercase_extension(), expected);
+	}
+}
