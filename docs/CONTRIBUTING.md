@@ -11,3 +11,11 @@ RUST_LOG="debug" RUST_BACKTRACE=1 cargo run -- --directory "/Users/<USER>/<FOLDE
 Optionally:
 - add `--file-type <photo|video>` for renaming only a specific file type.
 - add `--no-dry-run` for disabling the default execution as dry run.
+
+## Test
+
+Some unit tests are provided in the project, run them easily with
+
+```shell
+cargo test
+```
