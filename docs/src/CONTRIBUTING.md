@@ -1,3 +1,5 @@
+# CONTRIBUTING
+
 > **Note**: the following directory paths are based on macOS.
 
 ## Run
