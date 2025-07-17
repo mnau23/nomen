@@ -1,5 +1,5 @@
 # Summary
 
 - [index](./index.md)
-- [CONTRIBUTING](./CONTRIBUTING.md)
-- [REQUIREMENTS](./REQUIREMENTS.md)
+- [CONTRIBUTING](contributing.md)
+- [REQUIREMENTS](requirements.md)
