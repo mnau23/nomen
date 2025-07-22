@@ -8,7 +8,7 @@ When developing, it can be useful to run the project as below.
 
 ```shell
 RUST_BACKTRACE=1 \
-RUST_LOG="debug" \                                                                                               INT ✘ 
+RUST_LOG="debug" \
 cargo run -- --directory "/Users/<USER>/<FOLDER>"
 ```
 
