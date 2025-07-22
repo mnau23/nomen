@@ -4,7 +4,7 @@
 
 ## Documentation
 
-Learn more from the [documentation](./docs).
+Learn more [here](./docs).
 
 ## License
 
