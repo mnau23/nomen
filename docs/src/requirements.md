@@ -1,4 +1,4 @@
-## Requirements
+# Requirements
 
 The only tool required to compile and use this project is `cargo`.
 
