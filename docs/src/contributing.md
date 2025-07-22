@@ -1,13 +1,15 @@
-# CONTRIBUTING
+# Contributing
 
-> **Note**: the following directory paths are based on macOS.
+> **Note**: all directory paths are based on macOS.
 
 ## Run
 
 When developing, it can be useful to run the project as below.
 
 ```shell
-RUST_LOG="debug" RUST_BACKTRACE=1 cargo run -- --directory "/Users/<USER>/<FOLDER>"
+RUST_BACKTRACE=1 \
+RUST_LOG="debug" \                                                                                               INT ✘ 
+cargo run -- --directory "/Users/<USER>/<FOLDER>"
 ```
 
 Optionally:
@@ -16,8 +18,4 @@ Optionally:
 
 ## Test
 
-Some unit tests are provided in the project, run them easily with
-
-```shell
-cargo test
-```
+Some unit tests are provided in the project, run them easily with `cargo test`.

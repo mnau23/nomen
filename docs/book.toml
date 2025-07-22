@@ -2,7 +2,7 @@
 authors = ["mnau23"]
 language = "en"
 src = "src"
-title = "Nomen"
+title = "nomen Documentation"
 
 [build]
 build-dir = "book"

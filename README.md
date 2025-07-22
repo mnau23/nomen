@@ -4,7 +4,7 @@
 
 ## Documentation
 
-Learn more [here](./docs).
+Learn more [here](./docs/src/SUMMARY.md).
 
 ## License
 

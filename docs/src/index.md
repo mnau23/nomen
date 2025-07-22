@@ -1,6 +1,4 @@
-# index
-
-> **Note**: the following directory paths are based on macOS.
+> **Note**: all directory paths are based on macOS.
 
 ## Installation
 
@@ -10,7 +8,9 @@
 
 ## Usage
 
-It is possible to execute the program within the directory containing the files to be renamed. An example of use is:
+It is possible to execute the program within the directory containing the files to be renamed.
+
+A basic example for running the program is:
 
 ```shell
 nomen --directory .
@@ -18,7 +18,7 @@ nomen --directory .
 
 The default behaviour is:
 - renaming both photos and videos.
-- execution in a dry run mode: this means no renaming will be applied.
+- dry-run mode execution: this means no renaming will be applied.
 Only a preview of the execution results will be shown.
 
 ### Rename only a file type
