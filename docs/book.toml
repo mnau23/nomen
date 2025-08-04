@@ -4,6 +4,9 @@ language = "en"
 src = "src"
 title = "nomen Documentation"
 
+[rust]
+edition = "2024"
+
 [build]
 build-dir = "book"
 create-missing = true
