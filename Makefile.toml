@@ -1,0 +1,37 @@
+[tasks.format]
+description = "Check code formatting across the whole workspace"
+args = ["fmt", "--all", "--check"]
+
+[tasks.build]
+description = "Build the project in debug mode"
+args = ["build"]
+
+[tasks.lint]
+description = "Run code linter"
+command = "cargo"
+args = ["clippy"]
+
+[tasks.test]
+description = "Run all tests"
+args = ["test"]
+
+#[tasks.install-tarpaulin]
+#description = "Install the code coverage tool"
+#install_crate = "cargo-tarpaulin"
+
+#[tasks.coverage]
+#description = "Run code coverage"
+#dependencies = ["install-tarpaulin"]
+#command = "cargo"
+#args = ["tarpaulin"]
+
+# Main flow - run as: cargo make nomen
+[tasks.nomen]
+description = "Check formatting, build and test the project"
+dependencies = [
+    "format",
+    "build",
+    "lint",
+    "test",
+    #"coverage"
+]
