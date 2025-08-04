@@ -18,3 +18,7 @@ test-case = "3.3"
 
 [lib]
 path = "src/lib/mod.rs"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"
