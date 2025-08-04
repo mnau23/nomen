@@ -1,7 +1,13 @@
 [package]
 name = "nomen"
 version = "0.1.0"
+authors = ["mnau23"]
+description = "TODO"
+#license-file = "./LICENSE"
+#license = "GPL-3"
 edition = "2024"
+repository = "todo"
+readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
