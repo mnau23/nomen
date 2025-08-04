@@ -4,3 +4,35 @@ hard_tabs = true
 remove_nested_parens = true
 max_width = 120
 chain_width = 60
+
+
+### FROM CHATGPT
+
+# Maximum width of each line.
+max_width = 100
+# Indent size (default is 4 spaces).
+tab_spaces = 4
+# Use spaces instead of tabs.
+hard_tabs = false
+# Force a trailing comma after every multiline item.
+trailing_comma = "Always"
+# Remove/avoid extra blank lines in code.
+format_code_in_doc_comments = true
+blank_lines_lower_bound = 1
+blank_lines_upper_bound = 2
+# Style for function return type arrows: "BeforeParams" or "AfterParams".
+fn_single_line = true
+# Use short-hand form for field initialization when applicable.
+struct_field_align_threshold = 20
+# Where to put the opening brace of a function, struct, etc.
+brace_style = "SameLine"
+# Control how imports are grouped: "Preserve", "StdExternalCrate", or "Crate".
+imports_granularity = "Crate"
+# Reorder imports to be grouped alphabetically.
+group_imports = "StdExternalCrate"
+# Keep function calls on one line if they fit.
+fn_call_width = 80
+# Keep struct literals on one line if they fit.
+struct_lit_width = 60
+# Align method call chains if they span multiple lines.
+chain_width = 60
