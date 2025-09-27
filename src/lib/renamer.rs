@@ -92,12 +92,15 @@ impl Renamer for Path {
 
 		let Ok(exif_data) = exif_reader.read_from_container(&mut buf_reader) else {
 			warn!("Unable to read EXIF data from: {}", self.display());
+			println!("Unable to read EXIF data from: {}", self.display()); // TODO: remove
 			return Ok("NA".to_string());
 		};
 
-		exif_data.get_field(Tag::DateTime, In::PRIMARY).map_or_else(
+		// TODO: check tag name
+		exif_data.get_field(Tag::DateTimeOriginal, In::PRIMARY).map_or_else(
 			|| {
 				warn!("Missing DateTimeOriginal tag");
+				println!("Missing DateTimeOriginal tag"); // TODO: remove
 				Ok("NA".to_string())
 			},
 			|field| {
