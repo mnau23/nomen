@@ -15,7 +15,7 @@ fn main() -> Result<()> {
 	let directory: &Path = &args.directory;
 	// make sure the path is a valid directory
 	if !directory.is_dir() {
-		bail!("{directory:?} is not a valid directory");
+		bail!("{} is not a valid directory", directory.display());
 	}
 
 	if args.dry_run {
