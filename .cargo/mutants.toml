@@ -1,0 +1,6 @@
+# https://mutants.rs/welcome.html
+
+exclude_re = [
+    "main",
+    "print_header",
+]
