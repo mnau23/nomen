@@ -18,7 +18,7 @@ anyhow = "1.0"
 chrono = "0.4"
 clap = { version = "4.5", features = ["derive", "env"] }
 env_logger = "0.11"
-ffmpeg-next = "7.1.0"
+ffmpeg-next = "8.0.0"
 kamadak-exif = "0.6.1"
 log = "0.4"
 
