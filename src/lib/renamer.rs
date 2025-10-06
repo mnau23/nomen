@@ -95,24 +95,28 @@ impl Renamer for Path {
 			return Ok("NA".to_string());
 		};
 
-		if let Some(field) = exif_data.get_field(Tag::DateTime, In::PRIMARY) {
-			let value = field.display_value().with_unit(&exif_data);
-			DateString::parse_and_format(&value.to_string())
-		} else {
-			warn!("Missing DateTimeOriginal tag");
-			Ok("NA".to_string())
-		}
+		exif_data.get_field(Tag::DateTime, In::PRIMARY).map_or_else(
+			|| {
+				warn!("Missing DateTimeOriginal tag");
+				Ok("NA".to_string())
+			},
+			|field| {
+				let value = field.display_value().with_unit(&exif_data);
+				DateString::parse_and_format(&value.to_string())
+			},
+		)
 	}
 
 	fn get_date_from_video(&self) -> anyhow::Result<String> {
 		let context = ffmpeg_next::format::input(&self)?;
 
-		if let Some(taken_date) = context.metadata().get("creation_time") {
-			DateString::parse_and_format(taken_date)
-		} else {
-			warn!("Missing creation_time tag");
-			Ok("NA".to_string())
-		}
+		context.metadata().get("creation_time").map_or_else(
+			|| {
+				warn!("Missing creation_time tag");
+				Ok("NA".to_string())
+			},
+			DateString::parse_and_format,
+		)
 	}
 
 	fn is_photo(&self) -> bool {
@@ -136,7 +140,7 @@ impl Renamer for Path {
 		let mut img_counter = 1;
 		let mut vid_counter = 1;
 		for entry in entries {
-			let file_path: &Path = &entry.path();
+			let file_path: &Self = &entry.path();
 
 			if file_path.is_file() {
 				let rename = |file_type, counter: &mut usize| -> anyhow::Result<()> {
@@ -185,7 +189,7 @@ impl Renamer for Path {
 
 				// apply changes only if it's not a dry run
 				if !dry_run {
-					let new_file_path = parent_path.join(new_file_name.clone());
+					let new_file_path = parent_path.join(new_file_name);
 					fs::rename(self, &new_file_path)?;
 				}
 			}
