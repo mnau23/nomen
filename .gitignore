@@ -1,5 +1,11 @@
+# IntelliJ project config
 .idea
+# Rust build directory
 target
-todo.md
+# mdBook output
 docs/book
+# cargo-mutants output
 mutants.out*
+
+###
+todo.md
