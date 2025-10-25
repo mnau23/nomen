@@ -3,9 +3,8 @@ use nomen::renamer::Renamer;
 use std::path::Path;
 use test_case::test_case;
 
-/// Generate fake video files with ffmpeg:
-/// `ffmpeg -f lavfi -i color=c=black:s=320x240:d=1 -c:v prores_ks -profile:v 0 tests/data/file.mov`
-/// TODO: fix docs
+/// Generate fake video files: `ffmpeg -f lavfi -i color=c=black:s=320x240:d=1 -c:v prores_ks -profile:v 0 tests/data/file.mov`.\
+/// Add metadata: `ffmpeg -i tests/data/another.mp4 -metadata creation_time="2025-09-27T08:00:00Z" -codec copy tests/data/file.mp4`.
 #[test_case("tests/data/video_with_creation_time.mp4", "2025-09-27" ; "with creation_time")]
 #[test_case("tests/data/video_without_creation_time.mov", "NA" ; "without creation_time")]
 fn test_get_date_from_video(path_str: &str, expected: &str) {
@@ -14,10 +13,8 @@ fn test_get_date_from_video(path_str: &str, expected: &str) {
 	assert_eq!(date, expected);
 }
 
-/// Generate fake image files
-/// ffmpeg -f lavfi -i color=c=white:s=1x1:d=1 tests/data/photo_with_exif.jpg
-/// exiftool -DateTimeOriginal="2025:09:27 08:00:00" tests/data/photo_with_exif.jpg
-/// TODO: fix docs
+/// Generate fake image files: `ffmpeg -f lavfi -i color=c=white:s=1x1:d=1 tests/data/file.jpg`.\
+/// Add metadata: `exiftool -DateTimeOriginal="2025:09:27 08:00:00" tests/data/file.jpg`.
 #[test_case("tests/data/photo_with_exif.jpg", "2025-09-27" ; "with creation_time")]
 #[test_case("tests/data/photo_without_exif.png", "NA" ; "without creation_time")]
 fn test_get_date_from_photo(path_str: &str, expected: &str) {

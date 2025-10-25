@@ -8,7 +8,13 @@ use std::io::BufReader;
 use std::path::Path;
 
 pub trait Renamer {
-	// TODO: add docs
+	/// Generates a new filename based on its metadata.
+	///
+	/// # Returns
+	/// A formatted filename string, e.g. `YYYY-MM-DD_Photo001.jpg`.
+	///
+	/// # Errors
+	/// Returns an error if the file's date cannot be retrieved.
 	fn generate_new_name(&self, file_type: FileType, num: usize) -> anyhow::Result<String>;
 
 	/// Retrieves the original date when an item was taken from its EXIF metadata.
@@ -89,7 +95,6 @@ pub trait Renamer {
 
 impl Renamer for Path {
 	fn generate_new_name(&self, file_type: FileType, num: usize) -> anyhow::Result<String> {
-		// rules to create the new name
 		let taken_date = match file_type {
 			FileType::Photo => self.get_date_from_photo()?,
 			FileType::Video => self.get_date_from_video()?,
