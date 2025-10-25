@@ -108,22 +108,21 @@ impl Renamer for Path {
 
 		let Ok(exif_data) = exif_reader.read_from_container(&mut buf_reader) else {
 			warn!("Unable to read EXIF data from: {}", self.display());
-			println!("Unable to read EXIF data from: {}", self.display()); // TODO: remove
 			return Ok("NA".to_string());
 		};
 
-		// TODO: check tag name
-		exif_data.get_field(Tag::DateTimeOriginal, In::PRIMARY).map_or_else(
-			|| {
-				warn!("Missing DateTimeOriginal tag");
-				println!("Missing DateTimeOriginal tag"); // TODO: remove
-				Ok("NA".to_string())
-			},
-			|field| {
-				let value = field.display_value().with_unit(&exif_data);
-				DateString::parse_and_format(&value.to_string())
-			},
-		)
+		exif_data
+			.get_field(Tag::DateTimeOriginal, In::PRIMARY)
+			.map_or_else(
+				|| {
+					warn!("Missing DateTimeOriginal tag");
+					Ok("NA".to_string())
+				},
+				|field| {
+					let value = field.display_value().with_unit(&exif_data);
+					DateString::parse_and_format(&value.to_string())
+				},
+			)
 	}
 
 	fn get_date_from_video(&self) -> anyhow::Result<String> {

@@ -26,7 +26,6 @@ fn test_get_date_from_photo(path_str: &str, expected: &str) {
 	assert_eq!(date, expected);
 }
 
-/// TODO: fix, extract match logic from process
 #[test_case("tests/data/photo_with_exif.jpg", true, false ; "photo file")]
 #[test_case("tests/data/video_with_creation_time.mov", false, true ; "video file")]
 fn test_file_type_detection(path_str: &str, expected_photo: bool, expected_video: bool) {

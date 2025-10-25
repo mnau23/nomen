@@ -4,7 +4,7 @@
 exclude_re = [
     "main",
     "print_header",
-    "<impl Renamer for Path>::process", # TODO: check
+    "<impl Renamer for Path>::process",
     "<impl Renamer for Path>::rename"
 ]
 
