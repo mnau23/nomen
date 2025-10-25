@@ -8,6 +8,9 @@ use std::io::BufReader;
 use std::path::Path;
 
 pub trait Renamer {
+	// TODO: add docs
+	fn generate_new_name(&self, file_type: FileType, num: usize) -> anyhow::Result<String>;
+
 	/// Retrieves the original date when an item was taken from its EXIF metadata.
 	///
 	/// # Returns
@@ -85,6 +88,19 @@ pub trait Renamer {
 }
 
 impl Renamer for Path {
+	fn generate_new_name(&self, file_type: FileType, num: usize) -> anyhow::Result<String> {
+		// rules to create the new name
+		let taken_date = match file_type {
+			FileType::Photo => self.get_date_from_photo()?,
+			FileType::Video => self.get_date_from_video()?,
+			FileType::All => unreachable!("\"All\" should not be passed here"),
+		};
+		let number = add_padded_numbering(3, num);
+		let extension = self.to_lowercase_extension().unwrap_or_default();
+
+		Ok(format!("{taken_date}_{file_type:?}{number}.{extension}"))
+	}
+
 	fn get_date_from_photo(&self) -> anyhow::Result<String> {
 		let file = fs::File::open(self)?;
 		let mut buf_reader = BufReader::new(&file);
@@ -178,16 +194,7 @@ impl Renamer for Path {
 	fn rename(&self, file_type: FileType, num: usize, dry_run: bool) -> anyhow::Result<()> {
 		if let Some(parent_path) = self.parent() {
 			if let Some(old_file_name) = self.file_name() {
-				// rules to create the new name
-				let taken_date = match file_type {
-					FileType::Photo => self.get_date_from_photo()?,
-					FileType::Video => self.get_date_from_video()?,
-					FileType::All => unreachable!("\"all\" should not be passed here"),
-				};
-				let number = add_padded_numbering(3, num);
-				let extension = self.to_lowercase_extension().unwrap_or_default();
-
-				let new_file_name = format!("{taken_date}_{file_type:?}{number}.{extension}");
+				let new_file_name = self.generate_new_name(file_type, num)?;
 				println!("| {:<40} | {new_file_name:<40} |", old_file_name.to_string_lossy());
 
 				// apply changes only if it's not a dry run
@@ -197,7 +204,6 @@ impl Renamer for Path {
 				}
 			}
 		}
-
 		Ok(())
 	}
 

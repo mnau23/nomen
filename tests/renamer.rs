@@ -1,3 +1,4 @@
+use nomen::models::FileType;
 use nomen::renamer::Renamer;
 use std::path::Path;
 use test_case::test_case;
@@ -32,4 +33,11 @@ fn test_file_type_detection(path_str: &str, expected_photo: bool, expected_video
 	let path = Path::new(path_str);
 	assert_eq!(path.is_photo(), expected_photo, "is_photo failed for {}", path_str);
 	assert_eq!(path.is_video(), expected_video, "is_video failed for {}", path_str);
+}
+
+#[test_case("tests/data/photo_with_exif.jpg", FileType::Photo, 1, "2025-09-27_Photo001.jpg"; "photo file")]
+fn test_generate_new_name(path_str: &str, file_type: FileType, num: usize, expected: &str) {
+	let path = Path::new(path_str);
+	let name = path.generate_new_name(file_type, num).unwrap();
+	assert_eq!(name, expected);
 }
