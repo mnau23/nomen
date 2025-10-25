@@ -5,7 +5,7 @@ target
 # mdBook output
 docs/book
 # cargo-mutants output
-mutants.out*
+.mutants
 
 ###
 todo.md
