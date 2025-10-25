@@ -1,7 +1,6 @@
-use std::path::Path;
 use nomen::renamer::Renamer;
+use std::path::Path;
 use test_case::test_case;
-use nomen::models::FileType;
 
 /// Generate fake video files with ffmpeg:
 /// `ffmpeg -f lavfi -i color=c=black:s=320x240:d=1 -c:v prores_ks -profile:v 0 tests/data/file.mov`
@@ -9,9 +8,9 @@ use nomen::models::FileType;
 #[test_case("tests/data/video_with_creation_time.mp4", "2025-09-27" ; "with creation_time")]
 #[test_case("tests/data/video_without_creation_time.mov", "NA" ; "without creation_time")]
 fn test_get_date_from_video(path_str: &str, expected: &str) {
-    let path = Path::new(path_str);
-    let date = path.get_date_from_video().unwrap();
-    assert_eq!(date, expected);
+	let path = Path::new(path_str);
+	let date = path.get_date_from_video().unwrap();
+	assert_eq!(date, expected);
 }
 
 /// Generate fake image files
@@ -21,17 +20,16 @@ fn test_get_date_from_video(path_str: &str, expected: &str) {
 #[test_case("tests/data/photo_with_exif.jpg", "2025-09-27" ; "with creation_time")]
 #[test_case("tests/data/photo_without_exif.png", "NA" ; "without creation_time")]
 fn test_get_date_from_photo(path_str: &str, expected: &str) {
-    let path = Path::new(path_str);
-    let date = path.get_date_from_photo().unwrap();
-    assert_eq!(date, expected);
+	let path = Path::new(path_str);
+	let date = path.get_date_from_photo().unwrap();
+	assert_eq!(date, expected);
 }
 
 /// TODO: fix, extract match logic from process
 #[test_case("tests/data/photo_with_exif.jpg", true, false ; "photo file")]
 #[test_case("tests/data/video_with_creation_time.mov", false, true ; "video file")]
 fn test_file_type_detection(path_str: &str, expected_photo: bool, expected_video: bool) {
-    let path = Path::new(path_str);
-
-    assert_eq!(path.is_photo(), expected_photo, "is_photo failed for {}", path_str);
-    assert_eq!(path.is_video(), expected_video, "is_video failed for {}", path_str);
+	let path = Path::new(path_str);
+	assert_eq!(path.is_photo(), expected_photo, "is_photo failed for {}", path_str);
+	assert_eq!(path.is_video(), expected_video, "is_video failed for {}", path_str);
 }
