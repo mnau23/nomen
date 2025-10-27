@@ -45,6 +45,9 @@ pub trait Renamer {
 	/// Returns an `anyhow::Error` if there is an issue accessing or reading the video file.
 	fn get_date_from_video(&self) -> anyhow::Result<String>;
 
+	/// TODO
+	fn is_hidden(&self) -> bool;
+
 	fn is_photo(&self) -> bool;
 
 	fn is_video(&self) -> bool;
@@ -142,6 +145,13 @@ impl Renamer for Path {
 		)
 	}
 
+	fn is_hidden(&self) -> bool {
+		self.file_name()
+			.and_then(|n| n.to_str())
+			.map(|name| name.starts_with('.'))
+			.unwrap_or(false)
+	}
+
 	fn is_photo(&self) -> bool {
 		matches!(
 			self.to_lowercase_extension().as_deref(),
@@ -164,6 +174,11 @@ impl Renamer for Path {
 		let mut vid_counter = 1;
 		for entry in entries {
 			let file_path: &Self = &entry.path();
+
+			// ignore hidden files
+			if file_path.is_hidden() {
+				continue;
+			}
 
 			if file_path.is_file() {
 				let rename = |file_type, counter: &mut usize| -> anyhow::Result<()> {
