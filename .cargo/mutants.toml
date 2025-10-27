@@ -1,0 +1,12 @@
+# https://mutants.rs/welcome.html
+
+# Exclude specific functions from mutation testing
+exclude_re = [
+    "main",
+    "print_header",
+    "<impl Renamer for Path>::process",
+    "<impl Renamer for Path>::rename"
+]
+
+# Directory for all mutation testing output
+output = ".mutants"
