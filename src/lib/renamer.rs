@@ -148,8 +148,7 @@ impl Renamer for Path {
 	fn is_hidden(&self) -> bool {
 		self.file_name()
 			.and_then(|n| n.to_str())
-			.map(|name| name.starts_with('.'))
-			.unwrap_or(false)
+			.is_some_and(|n| n.starts_with('.'))
 	}
 
 	fn is_photo(&self) -> bool {
