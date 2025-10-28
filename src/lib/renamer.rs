@@ -45,7 +45,6 @@ pub trait Renamer {
 	/// Returns an `anyhow::Error` if there is an issue accessing or reading the video file.
 	fn get_date_from_video(&self) -> anyhow::Result<String>;
 
-	/// TODO
 	fn is_hidden(&self) -> bool;
 
 	fn is_photo(&self) -> bool;
