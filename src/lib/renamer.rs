@@ -1,11 +1,19 @@
 use crate::helpers::{add_padded_numbering, print_header};
 use crate::models::{DateString, FileType, RunMode};
 use exif::{In, Reader, Tag};
+use infer;
 use log::warn;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::BufReader;
 use std::path::Path;
+
+fn get_mime_type(path: &std::path::Path) -> Option<String> {
+	infer::get_from_path(path)
+		.ok()
+		.flatten()
+		.map(|kind| kind.mime_type().to_string())
+}
 
 pub trait Renamer {
 	/// Generates a new filename based on its metadata.
@@ -151,14 +159,11 @@ impl Renamer for Path {
 	}
 
 	fn is_photo(&self) -> bool {
-		matches!(
-			self.to_lowercase_extension().as_deref(),
-			Some("heic" | "jpg" | "jpeg" | "png")
-		)
+		get_mime_type(self).is_some_and(|mime| mime.starts_with("image/"))
 	}
 
 	fn is_video(&self) -> bool {
-		matches!(self.to_lowercase_extension().as_deref(), Some("avi" | "mov" | "mp4"))
+		get_mime_type(self).is_some_and(|mime| mime.starts_with("video/"))
 	}
 
 	fn process(&self, file_type: FileType, mode: RunMode) -> anyhow::Result<()> {
@@ -212,7 +217,13 @@ impl Renamer for Path {
 						rename(FileType::Video, &mut vid_counter)?;
 					}
 				}
-				_ => unreachable!("Unexpected match"),
+				_ => {
+					warn!(
+						"Unexpected FileType or file not matching any known type: {}",
+						file_path.display()
+					);
+					unreachable!("Unexpected FileType or file not matching any known type");
+				}
 			}
 		}
 
