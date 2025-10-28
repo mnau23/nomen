@@ -3,7 +3,6 @@ use clap::Parser;
 use log::debug;
 use nomen::models::Args;
 use nomen::renamer::Renamer;
-use std::path::Path;
 
 fn main() -> Result<()> {
 	env_logger::init();
@@ -12,7 +11,7 @@ fn main() -> Result<()> {
 	let args = Args::parse();
 	debug!("Input: {args:?}");
 
-	let directory: &Path = &args.directory;
+	let directory = &args.directory;
 	// make sure the path is a valid directory
 	if !directory.is_dir() {
 		bail!("{} is not a valid directory", directory.display());
@@ -26,6 +25,5 @@ fn main() -> Result<()> {
 
 	directory.process(args.file_type, args.dry_run)?;
 
-	println!("✅  Process completed!");
 	Ok(())
 }

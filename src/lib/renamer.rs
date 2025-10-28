@@ -163,49 +163,61 @@ impl Renamer for Path {
 	}
 
 	fn process(&self, file_type: FileType, dry_run: bool) -> anyhow::Result<()> {
-		print_header();
+		// collect all entries, filter only valid files
+		let mut entries: Vec<_> = fs::read_dir(self)?
+			.filter_map(Result::ok)
+			.filter(|entry| {
+				let file_path = entry.path();
+				if !file_path.is_file() || file_path.is_hidden() {
+					return false;
+				}
+				match file_type {
+					FileType::Photo => file_path.is_photo(),
+					FileType::Video => file_path.is_video(),
+					FileType::All => file_path.is_photo() || file_path.is_video(),
+				}
+			})
+			.collect();
 
-		// collect all entries, filter out any invalid ones, then sort by current file name
-		let mut entries: Vec<_> = fs::read_dir(self)?.filter_map(Result::ok).collect();
+		// sort by current file name
 		entries.sort_by_key(fs::DirEntry::file_name);
+
+		if entries.is_empty() {
+			println!("\nEmpty folder! No files to process.\n");
+			return Ok(());
+		}
+
+		print_header();
 
 		let mut img_counter = 1;
 		let mut vid_counter = 1;
 		for entry in entries {
-			let file_path: &Self = &entry.path();
+			let file_path = &entry.path();
+			let rename = |file_type, counter: &mut usize| -> anyhow::Result<()> {
+				file_path.rename(file_type, *counter, dry_run)?;
+				*counter += 1;
+				Ok(())
+			};
 
-			// ignore hidden files
-			if file_path.is_hidden() {
-				continue;
-			}
-
-			if file_path.is_file() {
-				let rename = |file_type, counter: &mut usize| -> anyhow::Result<()> {
-					file_path.rename(file_type, *counter, dry_run)?;
-					*counter += 1;
-					Ok(())
-				};
-
-				match file_type {
-					FileType::Photo if file_path.is_photo() => {
+			match file_type {
+				FileType::Photo if file_path.is_photo() => {
+					rename(FileType::Photo, &mut img_counter)?;
+				}
+				FileType::Video if file_path.is_video() => {
+					rename(FileType::Video, &mut vid_counter)?;
+				}
+				FileType::All => {
+					if file_path.is_photo() {
 						rename(FileType::Photo, &mut img_counter)?;
-					}
-					FileType::Video if file_path.is_video() => {
+					} else if file_path.is_video() {
 						rename(FileType::Video, &mut vid_counter)?;
 					}
-					FileType::All => {
-						if file_path.is_photo() {
-							rename(FileType::Photo, &mut img_counter)?;
-						} else if file_path.is_video() {
-							rename(FileType::Video, &mut vid_counter)?;
-						}
-					}
-					_ => unreachable!("Unexpected match"),
 				}
+				_ => unreachable!("Unexpected match"),
 			}
 		}
 
-		println!();
+		println!("\n✅  Process completed!");
 		Ok(())
 	}
 
