@@ -2,13 +2,9 @@
 
 > A lightweight Rust CLI to automate bulk renaming of files in a directory with user-defined rules.
 
-## Documentation
+## 📚 Documentation
 
-Learn more [here](./docs/src/SUMMARY.md).
-
-## License
-
-Licensed under [GPL v3](./LICENSE).
+Learn more starting from [here](./docs/src/SUMMARY.md).
 
 ## Copyright
 
