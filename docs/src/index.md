@@ -17,13 +17,16 @@ nomen --directory .
 ```
 
 The default behaviour is:
+
 - renaming both photos and videos.
 - dry-run mode execution: this means no renaming will be applied.
+
 Only a preview of the execution results will be shown.
 
 ### Rename only a file type
 
 To rename only photos or videos in the specified directory, it is possible to pass another argument to the previous command.
+
 ```shell
 nomen --directory . --file-type <photo|video>
 ```

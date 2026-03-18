@@ -1,11 +1,13 @@
 # IntelliJ project config
 .idea
-# Rust build directory
-target
-# mdBook output
-docs/book
 # cargo-mutants output
 .mutants
+# mdBook output
+docs/book
+# Node.js dependencies
+node_modules
+# Rust build directory
+target
 
 ###
 todo.md

@@ -12,5 +12,5 @@ I confirm that before submitting this PR I have:
 - [ ] successfully run `cargo test` on my local environment
 - [ ] updated the project README with new relevant information
 - [ ] updated file(s) under `docs/`
-    - [ ] with a comprehensive description of the new features
-    - [ ] with useful development and testing commands
+  - [ ] with a comprehensive description of the new features
+  - [ ] with useful development and testing commands
