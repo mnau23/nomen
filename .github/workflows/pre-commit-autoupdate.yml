@@ -27,7 +27,9 @@ jobs:
       - name: Update hooks
         id: update
         run: |
-          OUTPUT="$(pre-commit autoupdate)"
+          OUTPUT="$(pre-commit autoupdate \
+            --repo https://github.com/pre-commit/pre-commit-hooks \
+          )"
           echo "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
           {
             echo 'logs<<EOF'
