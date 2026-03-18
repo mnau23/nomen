@@ -13,6 +13,7 @@ cargo run -- --directory "/Users/<USER>/<FOLDER>"
 ```
 
 Optionally:
+
 - add `--file-type <photo|video>` for renaming only a specific file type.
 - add `--no-dry-run` for disabling the default execution as dry run.
 
