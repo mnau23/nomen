@@ -2,6 +2,7 @@
 
 ## Installation
 
+- First of all, check the required dependencies in the [Requirements](./requirements.md) page.
 - Clone the repository locally.
 - Run `cargo install --path .` to compile and install the executable: it will be installed under `/.cargo/bin`.
 - Run `nomen --help` from any directory to read the usage instructions.
