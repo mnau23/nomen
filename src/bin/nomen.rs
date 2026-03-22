@@ -9,12 +9,6 @@ fn main() -> anyhow::Result<()> {
 	let args = Args::parse();
 	log::debug!("Input: {args:?}");
 
-	let directory = &args.directory;
-	// make sure the path is a valid directory
-	if !directory.is_dir() {
-		anyhow::bail!("'{}' is not a valid directory!", directory.display());
-	}
-
 	// initialize FFmpeg only when needed
 	if matches!(args.file_type, FileType::All | FileType::Video) {
 		log::trace!("Initializing FFmpeg...");
@@ -33,11 +27,11 @@ fn main() -> anyhow::Result<()> {
 		println!("✅ User confirmed: applying changes...");
 		RunMode::Apply(ApplyType::Confirmed)
 	} else {
-		println!("⛔ Process aborted by user: no changes were applied.");
+		println!("⛔ Process aborted: no changes were applied.");
 		return Ok(());
 	};
 
-	directory.process(args.file_type, run_mode)?;
+	args.directory.process(args.file_type, run_mode)?;
 
 	Ok(())
 }

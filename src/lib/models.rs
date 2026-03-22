@@ -3,11 +3,25 @@ use chrono::NaiveDateTime;
 use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
 
+fn parse_directory(s: &str) -> Result<PathBuf, anyhow::Error> {
+	let directory = PathBuf::from(s);
+
+	if !directory.exists() {
+		anyhow::bail!("Directory does not exist!");
+	}
+
+	if !directory.is_dir() {
+		anyhow::bail!("Not a directory!");
+	}
+
+	Ok(directory)
+}
+
 /// Processes and renames files in a directory based on the specified file type.
 #[derive(Debug, Parser)]
 pub struct Args {
 	/// Directory path
-	#[arg(long)]
+	#[arg(long, value_hint = clap::ValueHint::DirPath, value_parser = parse_directory)]
 	pub directory: PathBuf,
 
 	/// File type to convert
