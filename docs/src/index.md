@@ -39,3 +39,6 @@ To disable the dry run mode, add an optional argument to the previous command.
 ```shell
 nomen --directory . --no-dry-run
 ```
+
+When the dry run is disabled, the CLI asks for an interactive confirmation before applying changes. \
+To skip the prompt, add `--force` to the previous command.

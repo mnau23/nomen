@@ -18,6 +18,10 @@ pub struct Args {
 	// by default, the action selected is ArgAction::SetTrue
 	#[arg(long = "no-dry-run", action = clap::ArgAction::SetFalse)]
 	pub dry_run: bool,
+
+	/// Skip the interactive confirmation prompt when applying changes
+	#[arg(long)]
+	pub force: bool,
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]

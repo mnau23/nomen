@@ -16,6 +16,7 @@ Optionally, add:
 
 - `--file-type <photo|video>` for renaming only a specific file type.
 - `--no-dry-run` for disabling the default execution as dry run.
+- `--force` to skip the interactive confirmation prompt when `--no-dry-run` is used.
 
 ## Test
 
