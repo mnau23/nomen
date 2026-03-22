@@ -1,5 +1,5 @@
 use clap::Parser;
-use nomen::models::{Args, FileType, RunMode, UserConfirmation};
+use nomen::models::{ApplyType, Args, FileType, RunMode};
 use nomen::renamer::Renamer;
 use std::io::{self, IsTerminal, Write};
 
@@ -24,38 +24,30 @@ fn main() -> anyhow::Result<()> {
 	}
 
 	let run_mode = if args.dry_run {
+		println!("🦺 Dry run enabled: no changes will be applied.");
 		RunMode::DryRun
 	} else if args.force {
-		RunMode::Force
+		println!("🚨 Force mode enabled: applying changes without confirmation...");
+		RunMode::Apply(ApplyType::Forced)
+	} else if ask_confirmation(&args)? {
+		println!("✅ User confirmed: applying changes...");
+		RunMode::Apply(ApplyType::Confirmed)
 	} else {
-		RunMode::Apply(ask_confirmation(&args)?)
+		println!("⛔ Process aborted by user: no changes were applied.");
+		return Ok(());
 	};
 
-	match run_mode {
-		RunMode::Apply(UserConfirmation::Aborted) => {
-			println!("⛔ Process aborted by user or invalid input: no changes were applied.");
-		}
-		RunMode::Apply(UserConfirmation::Confirmed) => {
-			println!("✅ User confirmed: applying changes...");
-			directory.process(args.file_type, false)?;
-		}
-		RunMode::DryRun => {
-			println!("🦺 Dry run enabled: no changes will be applied.");
-			directory.process(args.file_type, true)?;
-		}
-		RunMode::Force => {
-			println!("🚨 Force mode enabled: applying changes without confirmation...");
-			directory.process(args.file_type, false)?;
-		}
-	}
+	directory.process(args.file_type, run_mode)?;
 
 	Ok(())
 }
 
-fn ask_confirmation(args: &Args) -> anyhow::Result<UserConfirmation> {
+fn ask_confirmation(args: &Args) -> anyhow::Result<bool> {
 	// make sure to run in an interactive terminal
 	if !io::stdin().is_terminal() {
-		anyhow::bail!("Refusing to apply changes without confirmation on a non-interactive stdin.");
+		anyhow::bail!(
+			"Refusing to apply changes without confirmation on a non-interactive stdin. Re-run with --force."
+		);
 	}
 
 	println!(
@@ -69,11 +61,7 @@ fn ask_confirmation(args: &Args) -> anyhow::Result<UserConfirmation> {
 	let mut input = String::new();
 	io::stdin().read_line(&mut input)?;
 
-	if !is_yes(&input) {
-		return Ok(UserConfirmation::Aborted);
-	}
-
-	Ok(UserConfirmation::Confirmed)
+	Ok(is_yes(&input))
 }
 
 fn is_yes(input: &str) -> bool {

@@ -1,5 +1,5 @@
 use crate::helpers::{add_padded_numbering, print_header};
-use crate::models::{DateString, FileType};
+use crate::models::{DateString, FileType, RunMode};
 use exif::{In, Reader, Tag};
 use log::warn;
 use std::ffi::OsStr;
@@ -56,7 +56,7 @@ pub trait Renamer {
 	/// # Arguments
 	///
 	/// - `file_type`: the type of file to be processed.
-	/// - `dry_run`: if `true`, no actual renaming will occur; the function will only print the intended changes.
+	/// - `mode`: whether to only preview (`DryRun`) or apply changes (`Apply`).
 	///
 	/// # Returns
 	///
@@ -69,7 +69,7 @@ pub trait Renamer {
 	/// - the directory cannot be read (e.g., invalid path or insufficient permissions).
 	/// - an error occurs while reading a directory entry (e.g., invalid file or I/O error).
 	/// - an error occurs during file renaming (e.g., due to filesystem restrictions, permissions issues, or name conflicts).
-	fn process(&self, file_type: FileType, dry_run: bool) -> anyhow::Result<()>;
+	fn process(&self, file_type: FileType, mode: RunMode) -> anyhow::Result<()>;
 
 	/// Performs the actual renaming of a file and applies the changes when it's not a dry run execution.
 	///
@@ -77,7 +77,7 @@ pub trait Renamer {
 	///
 	/// - `file_type`: the type of file being renamed.
 	/// - `num`: a sequential number to append to the new file name.
-	/// - `dry_run`: if `true`, the renaming operation is simulated - only the intended renaming is printed to the console.
+	/// - `mode`: whether to only preview (`DryRun`) or apply changes (`Apply`).
 	///
 	/// # Returns
 	///
@@ -90,7 +90,7 @@ pub trait Renamer {
 	/// - the directory cannot be read (e.g., invalid path or insufficient permissions).
 	/// - any file entry in the directory cannot be accessed (e.g., due to filesystem issues).
 	/// - an error occurs during file renaming (e.g., due to filesystem restrictions, permissions issues, or name conflicts).
-	fn rename(&self, file_type: FileType, num: usize, dry_run: bool) -> anyhow::Result<()>;
+	fn rename(&self, file_type: FileType, num: usize, mode: RunMode) -> anyhow::Result<()>;
 
 	fn to_lowercase_extension(&self) -> Option<String>;
 }
@@ -161,7 +161,7 @@ impl Renamer for Path {
 		matches!(self.to_lowercase_extension().as_deref(), Some("avi" | "mov" | "mp4"))
 	}
 
-	fn process(&self, file_type: FileType, dry_run: bool) -> anyhow::Result<()> {
+	fn process(&self, file_type: FileType, mode: RunMode) -> anyhow::Result<()> {
 		// collect all entries, filter only valid files
 		let mut entries: Vec<_> = fs::read_dir(self)?
 			.filter_map(Result::ok)
@@ -193,7 +193,7 @@ impl Renamer for Path {
 		for entry in entries {
 			let file_path = &entry.path();
 			let rename = |file_type, counter: &mut usize| -> anyhow::Result<()> {
-				file_path.rename(file_type, *counter, dry_run)?;
+				file_path.rename(file_type, *counter, mode)?;
 				*counter += 1;
 				Ok(())
 			};
@@ -220,14 +220,14 @@ impl Renamer for Path {
 		Ok(())
 	}
 
-	fn rename(&self, file_type: FileType, num: usize, dry_run: bool) -> anyhow::Result<()> {
+	fn rename(&self, file_type: FileType, num: usize, mode: RunMode) -> anyhow::Result<()> {
 		if let Some(parent_path) = self.parent() {
 			if let Some(old_file_name) = self.file_name() {
 				let new_file_name = self.generate_new_name(file_type, num)?;
 				println!("| {:<40} | {new_file_name:<40} |", old_file_name.to_string_lossy());
 
-				// apply changes only if it's not a dry run
-				if !dry_run {
+				// apply changes only when explicitly requested
+				if matches!(mode, RunMode::Apply(_)) {
 					let new_file_path = parent_path.join(new_file_name);
 					fs::rename(self, &new_file_path)?;
 				}

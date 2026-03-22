@@ -31,18 +31,19 @@ pub enum FileType {
 	Video,
 }
 
+/// Execution mode for filesystem operations
+#[derive(Clone, Copy, Debug)]
 pub enum RunMode {
-	/// Apply changes after user confirmation
-	Apply(UserConfirmation),
-	/// Preview only: no filesystem changes are applied
 	DryRun,
-	/// Apply changes without confirmation
-	Force,
+	Apply(ApplyType),
 }
 
-pub enum UserConfirmation {
-	Aborted,
+#[derive(Clone, Copy, Debug)]
+pub enum ApplyType {
+	/// Interactive confirmation
 	Confirmed,
+	/// Bypassed confirmation
+	Forced,
 }
 
 pub(crate) struct DateString;
