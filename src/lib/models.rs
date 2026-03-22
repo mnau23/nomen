@@ -31,6 +31,19 @@ pub enum FileType {
 	Video,
 }
 
+pub enum RunMode {
+	/// Apply changes after user confirmation
+	Apply(UserConfirmation),
+	/// Preview only: no filesystem changes are applied
+	DryRun,
+}
+
+pub enum UserConfirmation {
+	Aborted,
+	Confirmed,
+	Forced,
+}
+
 pub(crate) struct DateString;
 
 impl DateString {
