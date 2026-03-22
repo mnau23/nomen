@@ -31,18 +31,26 @@ fn main() -> anyhow::Result<()> {
 
 	if !args.dry_run && !args.force {
 		match ask_confirmation(&args)? {
-			Some(()) => {
+			Confirmation::Yes => {
 				println!("Applying changes...");
 				directory.process(args.file_type, args.dry_run)?;
 			}
-			None => return Ok(()),
+			Confirmation::No => {
+				println!("Process aborted: no changes were applied.");
+				return Ok(());
+			}
 		}
 	}
 
 	Ok(())
 }
 
-fn ask_confirmation(args: &Args) -> anyhow::Result<Option<()>> {
+enum Confirmation {
+	Yes,
+	No,
+}
+
+fn ask_confirmation(args: &Args) -> anyhow::Result<Confirmation> {
 	// make sure to run in an interactive terminal
 	if !io::stdin().is_terminal() {
 		anyhow::bail!("Refusing to apply changes without confirmation on a non-interactive stdin.");
@@ -60,11 +68,10 @@ fn ask_confirmation(args: &Args) -> anyhow::Result<Option<()>> {
 	io::stdin().read_line(&mut input)?;
 
 	if !is_yes(&input) {
-		println!("Process aborted: no changes were applied.");
-		return Ok(None);
+		return Ok(Confirmation::No);
 	}
 
-	Ok(Some(()))
+	Ok(Confirmation::Yes)
 }
 
 fn is_yes(input: &str) -> bool {
