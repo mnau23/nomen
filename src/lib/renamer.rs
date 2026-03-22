@@ -227,7 +227,7 @@ impl Renamer for Path {
 				println!("| {:<40} | {new_file_name:<40} |", old_file_name.to_string_lossy());
 
 				// apply changes only when explicitly requested
-				if matches!(mode, RunMode::Apply(_)) {
+				if mode.should_apply() {
 					let new_file_path = parent_path.join(new_file_name);
 					fs::rename(self, &new_file_path)?;
 				}

@@ -38,6 +38,18 @@ pub enum RunMode {
 	Apply(ApplyType),
 }
 
+impl RunMode {
+	#[must_use]
+	pub const fn is_dry_run(&self) -> bool {
+		matches!(self, Self::DryRun)
+	}
+
+	#[must_use]
+	pub const fn should_apply(&self) -> bool {
+		matches!(self, Self::Apply(_))
+	}
+}
+
 #[derive(Clone, Copy, Debug)]
 pub enum ApplyType {
 	/// Interactive confirmation
