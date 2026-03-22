@@ -1,15 +1,13 @@
 use anyhow::{Result, bail};
 use clap::Parser;
-use log::debug;
-use nomen::models::Args;
+use nomen::models::{Args, FileType};
 use nomen::renamer::Renamer;
 
 fn main() -> Result<()> {
 	env_logger::init();
-	ffmpeg_next::init()?;
 
 	let args = Args::parse();
-	debug!("Input: {args:?}");
+	log::debug!("Input: {args:?}");
 
 	let directory = &args.directory;
 	// make sure the path is a valid directory
@@ -21,6 +19,14 @@ fn main() -> Result<()> {
 		println!("🦺 This is a dry run: no changes will be made.");
 	} else {
 		println!("🚨 Running program: changes will be applied.");
+	}
+
+	// initialize FFmpeg only when needed
+	if matches!(args.file_type, FileType::All | FileType::Video) {
+		log::trace!("Initializing FFmpeg...");
+		ffmpeg_next::init()?;
+	} else {
+		log::trace!("Skipping FFmpeg initialization...");
 	}
 
 	directory.process(args.file_type, args.dry_run)?;
