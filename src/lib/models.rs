@@ -49,27 +49,14 @@ pub enum FileType {
 #[derive(Clone, Copy, Debug)]
 pub enum RunMode {
 	DryRun,
-	Apply(ApplyType),
+	Apply,
 }
 
 impl RunMode {
 	#[must_use]
-	pub const fn is_dry_run(&self) -> bool {
-		matches!(self, Self::DryRun)
-	}
-
-	#[must_use]
 	pub const fn should_apply(&self) -> bool {
-		matches!(self, Self::Apply(_))
+		matches!(self, Self::Apply)
 	}
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum ApplyType {
-	/// Interactive confirmation
-	Confirmed,
-	/// Bypassed confirmation
-	Forced,
 }
 
 pub(crate) struct DateString;

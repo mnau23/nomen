@@ -1,5 +1,5 @@
 use clap::Parser;
-use nomen::models::{ApplyType, Args, FileType, RunMode};
+use nomen::models::{Args, FileType, RunMode};
 use nomen::renamer::Renamer;
 use std::io::{self, IsTerminal, Write};
 
@@ -22,10 +22,10 @@ fn main() -> anyhow::Result<()> {
 		RunMode::DryRun
 	} else if args.force {
 		println!("🚨 Force mode enabled: applying changes without confirmation...");
-		RunMode::Apply(ApplyType::Forced)
+		RunMode::Apply
 	} else if ask_confirmation(&args)? {
 		println!("✅ User confirmed: applying changes...");
-		RunMode::Apply(ApplyType::Confirmed)
+		RunMode::Apply
 	} else {
 		println!("⛔ Process aborted: no changes were applied.");
 		return Ok(());
