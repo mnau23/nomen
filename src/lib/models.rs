@@ -36,12 +36,13 @@ pub enum RunMode {
 	Apply(UserConfirmation),
 	/// Preview only: no filesystem changes are applied
 	DryRun,
+	/// Apply changes without confirmation
+	Force,
 }
 
 pub enum UserConfirmation {
 	Aborted,
 	Confirmed,
-	Forced,
 }
 
 pub(crate) struct DateString;

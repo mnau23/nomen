@@ -26,7 +26,7 @@ fn main() -> anyhow::Result<()> {
 	let run_mode = if args.dry_run {
 		RunMode::DryRun
 	} else if args.force {
-		RunMode::Apply(UserConfirmation::Forced)
+		RunMode::Force
 	} else {
 		RunMode::Apply(ask_confirmation(&args)?)
 	};
@@ -39,13 +39,13 @@ fn main() -> anyhow::Result<()> {
 			println!("✅ User confirmed: applying changes...");
 			directory.process(args.file_type, false)?;
 		}
-		RunMode::Apply(UserConfirmation::Forced) => {
-			println!("🚨 Force mode enabled: applying changes without confirmation...");
-			directory.process(args.file_type, false)?;
-		}
 		RunMode::DryRun => {
 			println!("🦺 Dry run enabled: no changes will be applied.");
 			directory.process(args.file_type, true)?;
+		}
+		RunMode::Force => {
+			println!("🚨 Force mode enabled: applying changes without confirmation...");
+			directory.process(args.file_type, false)?;
 		}
 	}
 
