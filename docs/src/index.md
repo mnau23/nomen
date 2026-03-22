@@ -41,4 +41,4 @@ nomen --directory . --no-dry-run
 ```
 
 When the dry run is disabled, the CLI asks for an interactive confirmation before applying changes. \
-To skip the prompt, add `--force` to the previous command.
+To skip the prompt, add `--force` to the previous command (requires `--no-dry-run`).

@@ -20,7 +20,7 @@ pub struct Args {
 	pub dry_run: bool,
 
 	/// Skip the interactive confirmation prompt when applying changes
-	#[arg(long)]
+	#[arg(long, requires = "dry_run")]
 	pub force: bool,
 }
 
