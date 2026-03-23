@@ -2,6 +2,7 @@
 
 ## Installation
 
+- First of all, check the required dependencies in the [Requirements](./requirements.md) page.
 - Clone the repository locally.
 - Run `cargo install --path .` to compile and install the executable: it will be installed under `/.cargo/bin`.
 - Run `nomen --help` from any directory to read the usage instructions.
@@ -38,3 +39,6 @@ To disable the dry run mode, add an optional argument to the previous command.
 ```shell
 nomen --directory . --no-dry-run
 ```
+
+When the dry run is disabled, the CLI asks for an interactive confirmation before applying changes. \
+To skip the prompt, add `--force` to the previous command (requires `--no-dry-run`).
