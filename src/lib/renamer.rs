@@ -8,56 +8,26 @@ use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum DetectedKind {
+pub enum DetectedKind {
 	Other,
 	Photo,
 	Video,
 }
 
-fn extension_is_photo(path: &Path) -> bool {
-	matches!(
-		path.extension()
-			.and_then(OsStr::to_str)
-			.map(str::to_ascii_lowercase)
-			.as_deref(),
-		Some("heic" | "jpg" | "jpeg" | "png")
-	)
-}
-
-fn extension_is_video(path: &Path) -> bool {
-	matches!(
-		path.extension()
-			.and_then(OsStr::to_str)
-			.map(str::to_ascii_lowercase)
-			.as_deref(),
-		Some("avi" | "mov" | "mp4")
-	)
-}
-
-fn detect_kind(path: &Path) -> DetectedKind {
-	// first try: magic-bytes detection (works even if extension is wrong)
-	if let Ok(Some(kind)) = infer::get_from_path(path) {
-		let mime = kind.mime_type();
-		if mime.starts_with("image/") {
-			return DetectedKind::Photo;
-		}
-		if mime.starts_with("video/") {
-			return DetectedKind::Video;
-		}
-	}
-
-	// fallback: extension-based detection
-	if extension_is_photo(path) {
-		return DetectedKind::Photo;
-	}
-	if extension_is_video(path) {
-		return DetectedKind::Video;
-	}
-
-	DetectedKind::Other
-}
-
 pub trait Renamer {
+	/// Detects whether a path points to a photo or a video.
+	///
+	/// Detection is implemented as:
+	/// - magic-bytes detection via `infer` when the file exists and is readable
+	/// - fallback to extension-based detection otherwise
+	fn detect_kind(&self) -> DetectedKind;
+
+	/// Deterministic, zero-I/O check that classifies this path as a photo based solely on its file extension.
+	fn extension_is_photo(&self) -> bool;
+
+	/// Deterministic, zero-I/O check that classifies this path as a video based solely on its file extension.
+	fn extension_is_video(&self) -> bool;
+
 	/// Generates a new filename based on its metadata.
 	///
 	/// # Returns
@@ -146,6 +116,49 @@ pub trait Renamer {
 }
 
 impl Renamer for Path {
+	fn detect_kind(&self) -> DetectedKind {
+		// first try: magic-bytes detection (works even if extension is wrong)
+		if let Ok(Some(kind)) = infer::get_from_path(self) {
+			let mime = kind.mime_type();
+			if mime.starts_with("image/") {
+				return DetectedKind::Photo;
+			}
+			if mime.starts_with("video/") {
+				return DetectedKind::Video;
+			}
+		}
+
+		// fallback: extension-based detection
+		if self.extension_is_photo() {
+			return DetectedKind::Photo;
+		}
+		if self.extension_is_video() {
+			return DetectedKind::Video;
+		}
+
+		DetectedKind::Other
+	}
+
+	fn extension_is_photo(&self) -> bool {
+		matches!(
+			self.extension()
+				.and_then(OsStr::to_str)
+				.map(str::to_ascii_lowercase)
+				.as_deref(),
+			Some("heic" | "jpg" | "jpeg" | "png")
+		)
+	}
+
+	fn extension_is_video(&self) -> bool {
+		matches!(
+			self.extension()
+				.and_then(OsStr::to_str)
+				.map(str::to_ascii_lowercase)
+				.as_deref(),
+			Some("avi" | "mov" | "mp4")
+		)
+	}
+
 	fn generate_new_name(&self, file_type: FileType, num: usize) -> anyhow::Result<String> {
 		let taken_date = match file_type {
 			FileType::Photo => self.get_date_from_photo()?,
@@ -201,11 +214,11 @@ impl Renamer for Path {
 	}
 
 	fn is_photo(&self) -> bool {
-		detect_kind(self) == DetectedKind::Photo
+		self.detect_kind() == DetectedKind::Photo
 	}
 
 	fn is_video(&self) -> bool {
-		detect_kind(self) == DetectedKind::Video
+		self.detect_kind() == DetectedKind::Video
 	}
 
 	fn process(&self, file_type: FileType, mode: RunMode) -> anyhow::Result<()> {
@@ -215,7 +228,7 @@ impl Renamer for Path {
 			.map(|entry| entry.path())
 			.filter(|file_path| file_path.is_file() && !file_path.is_hidden())
 			.filter_map(|file_path| {
-				let kind = detect_kind(&file_path);
+				let kind = file_path.detect_kind();
 				if kind == DetectedKind::Other {
 					return None;
 				}
