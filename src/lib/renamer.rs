@@ -256,6 +256,15 @@ impl Renamer for Path {
 					FileType::All => matches!(kind, DetectedKind::Photo | DetectedKind::Video),
 				};
 
+				// ignore the file if its detected kind doesn't match the requested CLI filter
+				if !matches_requested {
+					log::debug!(
+						"Skipping file due to type mismatch: requested={file_type:?}, detected={kind:?}, path={}",
+						file_path.display()
+					);
+					return None;
+				}
+
 				matches_requested.then_some((file_path, kind))
 			})
 			.collect();
