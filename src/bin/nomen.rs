@@ -1,3 +1,4 @@
+use anyhow::Context;
 use clap::Parser;
 use nomen::models::{Args, FileType, RunMode};
 use nomen::renamer::Renamer;
@@ -12,7 +13,7 @@ fn main() -> anyhow::Result<()> {
 	// initialize FFmpeg only when needed
 	if matches!(args.file_type, FileType::All | FileType::Video) {
 		log::trace!("Initializing FFmpeg...");
-		ffmpeg_next::init()?;
+		ffmpeg_next::init().context("Failed to initialize FFmpeg")?;
 	} else {
 		log::trace!("Skipping FFmpeg initialization...");
 	}
@@ -31,7 +32,15 @@ fn main() -> anyhow::Result<()> {
 		return Ok(());
 	};
 
-	args.directory.process(args.file_type, run_mode)?;
+	args.directory
+		.process(args.file_type, run_mode)
+		.with_context(|| {
+			format!(
+				"Failed to process directory '{}' (file_type={:?}, mode={run_mode:?})",
+				args.directory.display(),
+				args.file_type
+			)
+		})?;
 
 	Ok(())
 }

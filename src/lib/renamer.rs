@@ -1,5 +1,6 @@
 use crate::helpers::{add_padded_numbering, print_header};
 use crate::models::{DateString, FileType, RunMode};
+use anyhow::Context;
 use exif::{In, Reader, Tag};
 use log::warn;
 use std::ffi::OsStr;
@@ -172,7 +173,8 @@ impl Renamer for Path {
 	}
 
 	fn get_date_from_photo(&self) -> anyhow::Result<String> {
-		let file = fs::File::open(self)?;
+		let file =
+			fs::File::open(self).with_context(|| format!("Failed to open '{}' for EXIF data", self.display()))?;
 		let mut buf_reader = BufReader::new(&file);
 		let exif_reader = Reader::new();
 
@@ -196,7 +198,8 @@ impl Renamer for Path {
 	}
 
 	fn get_date_from_video(&self) -> anyhow::Result<String> {
-		let context = ffmpeg_next::format::input(&self)?;
+		let context = ffmpeg_next::format::input(&self)
+			.with_context(|| format!("Failed to open '{}' with FFmpeg", self.display()))?;
 
 		context.metadata().get("creation_time").map_or_else(
 			|| {
@@ -223,9 +226,23 @@ impl Renamer for Path {
 
 	fn process(&self, file_type: FileType, mode: RunMode) -> anyhow::Result<()> {
 		// collect all entries, filter only valid files
-		let mut entries: Vec<(PathBuf, DetectedKind)> = fs::read_dir(self)?
-			.filter_map(Result::ok)
-			.map(|entry| entry.path())
+		let mut entries: Vec<(PathBuf, DetectedKind)> = fs::read_dir(self)
+			.with_context(|| {
+				format!(
+					"Failed to read directory '{}' (file_type={file_type:?}, mode={mode:?})",
+					self.display()
+				)
+			})?
+			.filter_map(|entry| match entry {
+				Ok(entry) => Some(entry.path()),
+				Err(err) => {
+					warn!(
+						"Skipping directory entry in '{}' due to an I/O error: {err}",
+						self.display()
+					);
+					None
+				}
+			})
 			.filter(|file_path| file_path.is_file() && !file_path.is_hidden())
 			.filter_map(|file_path| {
 				let kind = file_path.detect_kind();
@@ -288,11 +305,18 @@ impl Renamer for Path {
 
 				// apply changes only when explicitly requested
 				if mode.should_apply() {
-					let new_file_path = parent_path.join(new_file_name);
-					fs::rename(self, &new_file_path)?;
+					let new_file_path = parent_path.join(&new_file_name);
+					fs::rename(self, &new_file_path).with_context(|| {
+						format!(
+							"Failed to rename file '{}' -> '{}'",
+							self.display(),
+							&new_file_path.display()
+						)
+					})?;
 				}
 			}
 		}
+
 		Ok(())
 	}
 
