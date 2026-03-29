@@ -1,18 +1,60 @@
 use crate::helpers::{add_padded_numbering, print_header};
 use crate::models::{DateString, FileType, RunMode};
 use exif::{In, Reader, Tag};
-use infer;
 use log::warn;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::BufReader;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-fn get_mime_type(path: &std::path::Path) -> Option<String> {
-	infer::get_from_path(path)
-		.ok()
-		.flatten()
-		.map(|kind| kind.mime_type().to_string())
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum DetectedKind {
+	Other,
+	Photo,
+	Video,
+}
+
+fn extension_is_photo(path: &Path) -> bool {
+	matches!(
+		path.extension()
+			.and_then(OsStr::to_str)
+			.map(str::to_ascii_lowercase)
+			.as_deref(),
+		Some("heic" | "jpg" | "jpeg" | "png")
+	)
+}
+
+fn extension_is_video(path: &Path) -> bool {
+	matches!(
+		path.extension()
+			.and_then(OsStr::to_str)
+			.map(str::to_ascii_lowercase)
+			.as_deref(),
+		Some("avi" | "mov" | "mp4")
+	)
+}
+
+fn detect_kind(path: &Path) -> DetectedKind {
+	// first try: magic-bytes detection (works even if extension is wrong)
+	if let Ok(Some(kind)) = infer::get_from_path(path) {
+		let mime = kind.mime_type();
+		if mime.starts_with("image/") {
+			return DetectedKind::Photo;
+		}
+		if mime.starts_with("video/") {
+			return DetectedKind::Video;
+		}
+	}
+
+	// fallback: extension-based detection
+	if extension_is_photo(path) {
+		return DetectedKind::Photo;
+	}
+	if extension_is_video(path) {
+		return DetectedKind::Video;
+	}
+
+	DetectedKind::Other
 }
 
 pub trait Renamer {
@@ -159,32 +201,37 @@ impl Renamer for Path {
 	}
 
 	fn is_photo(&self) -> bool {
-		get_mime_type(self).is_some_and(|mime| mime.starts_with("image/"))
+		detect_kind(self) == DetectedKind::Photo
 	}
 
 	fn is_video(&self) -> bool {
-		get_mime_type(self).is_some_and(|mime| mime.starts_with("video/"))
+		detect_kind(self) == DetectedKind::Video
 	}
 
 	fn process(&self, file_type: FileType, mode: RunMode) -> anyhow::Result<()> {
 		// collect all entries, filter only valid files
-		let mut entries: Vec<_> = fs::read_dir(self)?
+		let mut entries: Vec<(PathBuf, DetectedKind)> = fs::read_dir(self)?
 			.filter_map(Result::ok)
-			.filter(|entry| {
-				let file_path = entry.path();
-				if !file_path.is_file() || file_path.is_hidden() {
-					return false;
+			.map(|entry| entry.path())
+			.filter(|file_path| file_path.is_file() && !file_path.is_hidden())
+			.filter_map(|file_path| {
+				let kind = detect_kind(&file_path);
+				if kind == DetectedKind::Other {
+					return None;
 				}
-				match file_type {
-					FileType::Photo => file_path.is_photo(),
-					FileType::Video => file_path.is_video(),
-					FileType::All => file_path.is_photo() || file_path.is_video(),
-				}
+
+				let matches_requested = match file_type {
+					FileType::Photo => kind == DetectedKind::Photo,
+					FileType::Video => kind == DetectedKind::Video,
+					FileType::All => matches!(kind, DetectedKind::Photo | DetectedKind::Video),
+				};
+
+				matches_requested.then_some((file_path, kind))
 			})
 			.collect();
 
 		// sort by current file name
-		entries.sort_by_key(fs::DirEntry::file_name);
+		entries.sort_by_key(|(path, _)| path.file_name().map(ToOwned::to_owned));
 
 		if entries.is_empty() {
 			println!("\nEmpty folder! No files to process.\n");
@@ -195,34 +242,23 @@ impl Renamer for Path {
 
 		let mut img_counter = 1;
 		let mut vid_counter = 1;
-		for entry in entries {
-			let file_path = &entry.path();
-			let rename = |file_type, counter: &mut usize| -> anyhow::Result<()> {
-				file_path.rename(file_type, *counter, mode)?;
+		for (file_path, kind) in entries {
+			let rename = |rename_as: FileType, counter: &mut usize| -> anyhow::Result<()> {
+				file_path.rename(rename_as, *counter, mode)?;
 				*counter += 1;
 				Ok(())
 			};
 
-			match file_type {
-				FileType::Photo if file_path.is_photo() => {
+			match (file_type, kind) {
+				(FileType::Photo | FileType::All, DetectedKind::Photo) => {
 					rename(FileType::Photo, &mut img_counter)?;
 				}
-				FileType::Video if file_path.is_video() => {
+				(FileType::Video | FileType::All, DetectedKind::Video) => {
 					rename(FileType::Video, &mut vid_counter)?;
 				}
-				FileType::All => {
-					if file_path.is_photo() {
-						rename(FileType::Photo, &mut img_counter)?;
-					} else if file_path.is_video() {
-						rename(FileType::Video, &mut vid_counter)?;
-					}
-				}
 				_ => {
-					warn!(
-						"Unexpected FileType or file not matching any known type: {}",
-						file_path.display()
-					);
-					unreachable!("Unexpected FileType or file not matching any known type");
+					// it should be unreachable due to filtering - do not panic
+					warn!("Skipping unsupported file: {}", file_path.display());
 				}
 			}
 		}
