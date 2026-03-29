@@ -2,7 +2,6 @@ use crate::helpers::{add_padded_numbering, print_header};
 use crate::models::{DateString, FileType, RunMode};
 use anyhow::Context;
 use exif::{In, Reader, Tag};
-use log::warn;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::BufReader;
@@ -119,7 +118,7 @@ pub trait Renamer {
 impl Renamer for Path {
 	fn detect_kind(&self) -> DetectedKind {
 		// first try: magic-bytes detection (works even if extension is wrong)
-		if let Ok(Some(kind)) = infer::get_from_path(self) {
+		if let Some(kind) = infer::get_from_path(self).ok().flatten() {
 			let mime = kind.mime_type();
 			if mime.starts_with("image/") {
 				return DetectedKind::Photo;
@@ -179,7 +178,7 @@ impl Renamer for Path {
 		let exif_reader = Reader::new();
 
 		let Ok(exif_data) = exif_reader.read_from_container(&mut buf_reader) else {
-			warn!("Unable to read EXIF data from: {}", self.display());
+			log::warn!("Unable to read EXIF data from: {}", self.display());
 			return Ok("NA".to_string());
 		};
 
@@ -187,7 +186,7 @@ impl Renamer for Path {
 			.get_field(Tag::DateTimeOriginal, In::PRIMARY)
 			.map_or_else(
 				|| {
-					warn!("Missing DateTimeOriginal tag");
+					log::warn!("Missing DateTimeOriginal tag");
 					Ok("NA".to_string())
 				},
 				|field| {
@@ -203,7 +202,7 @@ impl Renamer for Path {
 
 		context.metadata().get("creation_time").map_or_else(
 			|| {
-				warn!("Missing creation_time tag");
+				log::warn!("Missing creation_time tag");
 				Ok("NA".to_string())
 			},
 			DateString::parse_and_format,
@@ -236,7 +235,7 @@ impl Renamer for Path {
 			.filter_map(|entry| match entry {
 				Ok(entry) => Some(entry.path()),
 				Err(err) => {
-					warn!(
+					log::warn!(
 						"Skipping directory entry in '{}' due to an I/O error: {err}",
 						self.display()
 					);
@@ -247,6 +246,7 @@ impl Renamer for Path {
 			.filter_map(|file_path| {
 				let kind = file_path.detect_kind();
 				if kind == DetectedKind::Other {
+					log::debug!("Skipping unsupported file type: {}", file_path.display());
 					return None;
 				}
 
@@ -288,7 +288,7 @@ impl Renamer for Path {
 				}
 				_ => {
 					// it should be unreachable due to filtering - do not panic
-					warn!("Skipping unsupported file: {}", file_path.display());
+					log::warn!("Skipping unsupported file: {}", file_path.display());
 				}
 			}
 		}
