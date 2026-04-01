@@ -1,13 +1,33 @@
 use crate::helpers::{add_padded_numbering, print_header};
 use crate::models::{DateString, FileType, RunMode};
+use anyhow::Context;
 use exif::{In, Reader, Tag};
-use log::warn;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::BufReader;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DetectedKind {
+	Other,
+	Photo,
+	Video,
+}
 
 pub trait Renamer {
+	/// Detects whether a path points to a photo or a video.
+	///
+	/// Detection is implemented as:
+	/// - magic-bytes detection via `infer` when the file exists and is readable
+	/// - fallback to extension-based detection otherwise
+	fn detect_kind(&self) -> DetectedKind;
+
+	/// Deterministic, zero-I/O check that classifies this path as a photo based solely on its file extension.
+	fn extension_is_photo(&self) -> bool;
+
+	/// Deterministic, zero-I/O check that classifies this path as a video based solely on its file extension.
+	fn extension_is_video(&self) -> bool;
+
 	/// Generates a new filename based on its metadata.
 	///
 	/// # Returns
@@ -96,6 +116,49 @@ pub trait Renamer {
 }
 
 impl Renamer for Path {
+	fn detect_kind(&self) -> DetectedKind {
+		// first try: magic-bytes detection (works even if extension is wrong)
+		if let Some(kind) = infer::get_from_path(self).ok().flatten() {
+			let mime = kind.mime_type();
+			if mime.starts_with("image/") {
+				return DetectedKind::Photo;
+			}
+			if mime.starts_with("video/") {
+				return DetectedKind::Video;
+			}
+		}
+
+		// fallback: extension-based detection
+		if self.extension_is_photo() {
+			return DetectedKind::Photo;
+		}
+		if self.extension_is_video() {
+			return DetectedKind::Video;
+		}
+
+		DetectedKind::Other
+	}
+
+	fn extension_is_photo(&self) -> bool {
+		matches!(
+			self.extension()
+				.and_then(OsStr::to_str)
+				.map(str::to_ascii_lowercase)
+				.as_deref(),
+			Some("heic" | "jpg" | "jpeg" | "png")
+		)
+	}
+
+	fn extension_is_video(&self) -> bool {
+		matches!(
+			self.extension()
+				.and_then(OsStr::to_str)
+				.map(str::to_ascii_lowercase)
+				.as_deref(),
+			Some("avi" | "mov" | "mp4")
+		)
+	}
+
 	fn generate_new_name(&self, file_type: FileType, num: usize) -> anyhow::Result<String> {
 		let taken_date = match file_type {
 			FileType::Photo => self.get_date_from_photo()?,
@@ -109,12 +172,13 @@ impl Renamer for Path {
 	}
 
 	fn get_date_from_photo(&self) -> anyhow::Result<String> {
-		let file = fs::File::open(self)?;
+		let file =
+			fs::File::open(self).with_context(|| format!("Failed to open '{}' for EXIF data", self.display()))?;
 		let mut buf_reader = BufReader::new(&file);
 		let exif_reader = Reader::new();
 
 		let Ok(exif_data) = exif_reader.read_from_container(&mut buf_reader) else {
-			warn!("Unable to read EXIF data from: {}", self.display());
+			log::warn!("Unable to read EXIF data from: {}", self.display());
 			return Ok("NA".to_string());
 		};
 
@@ -122,7 +186,7 @@ impl Renamer for Path {
 			.get_field(Tag::DateTimeOriginal, In::PRIMARY)
 			.map_or_else(
 				|| {
-					warn!("Missing DateTimeOriginal tag");
+					log::warn!("Missing DateTimeOriginal tag");
 					Ok("NA".to_string())
 				},
 				|field| {
@@ -133,11 +197,12 @@ impl Renamer for Path {
 	}
 
 	fn get_date_from_video(&self) -> anyhow::Result<String> {
-		let context = ffmpeg_next::format::input(&self)?;
+		let context = ffmpeg_next::format::input(&self)
+			.with_context(|| format!("Failed to open '{}' with FFmpeg", self.display()))?;
 
 		context.metadata().get("creation_time").map_or_else(
 			|| {
-				warn!("Missing creation_time tag");
+				log::warn!("Missing creation_time tag");
 				Ok("NA".to_string())
 			},
 			DateString::parse_and_format,
@@ -151,35 +216,61 @@ impl Renamer for Path {
 	}
 
 	fn is_photo(&self) -> bool {
-		matches!(
-			self.to_lowercase_extension().as_deref(),
-			Some("heic" | "jpg" | "jpeg" | "png")
-		)
+		self.detect_kind() == DetectedKind::Photo
 	}
 
 	fn is_video(&self) -> bool {
-		matches!(self.to_lowercase_extension().as_deref(), Some("avi" | "mov" | "mp4"))
+		self.detect_kind() == DetectedKind::Video
 	}
 
 	fn process(&self, file_type: FileType, mode: RunMode) -> anyhow::Result<()> {
 		// collect all entries, filter only valid files
-		let mut entries: Vec<_> = fs::read_dir(self)?
-			.filter_map(Result::ok)
-			.filter(|entry| {
-				let file_path = entry.path();
-				if !file_path.is_file() || file_path.is_hidden() {
-					return false;
+		let mut entries: Vec<(PathBuf, DetectedKind)> = fs::read_dir(self)
+			.with_context(|| {
+				format!(
+					"Failed to read directory '{}' (file_type={file_type:?}, mode={mode:?})",
+					self.display()
+				)
+			})?
+			.filter_map(|entry| match entry {
+				Ok(entry) => Some(entry.path()),
+				Err(err) => {
+					log::warn!(
+						"Skipping directory entry in '{}' due to an I/O error: {err}",
+						self.display()
+					);
+					None
 				}
-				match file_type {
-					FileType::Photo => file_path.is_photo(),
-					FileType::Video => file_path.is_video(),
-					FileType::All => file_path.is_photo() || file_path.is_video(),
+			})
+			.filter(|file_path| file_path.is_file() && !file_path.is_hidden())
+			.filter_map(|file_path| {
+				let kind = file_path.detect_kind();
+				if kind == DetectedKind::Other {
+					log::debug!("Skipping unsupported file type: {}", file_path.display());
+					return None;
 				}
+
+				let matches_requested = match file_type {
+					FileType::Photo => kind == DetectedKind::Photo,
+					FileType::Video => kind == DetectedKind::Video,
+					FileType::All => matches!(kind, DetectedKind::Photo | DetectedKind::Video),
+				};
+
+				// ignore the file if its detected kind doesn't match the requested CLI filter
+				if !matches_requested {
+					log::debug!(
+						"Skipping file due to type mismatch: requested={file_type:?}, detected={kind:?}, path={}",
+						file_path.display()
+					);
+					return None;
+				}
+
+				matches_requested.then_some((file_path, kind))
 			})
 			.collect();
 
 		// sort by current file name
-		entries.sort_by_key(fs::DirEntry::file_name);
+		entries.sort_by_key(|(path, _)| path.file_name().map(ToOwned::to_owned));
 
 		if entries.is_empty() {
 			println!("\nEmpty folder! No files to process.\n");
@@ -190,29 +281,24 @@ impl Renamer for Path {
 
 		let mut img_counter = 1;
 		let mut vid_counter = 1;
-		for entry in entries {
-			let file_path = &entry.path();
-			let rename = |file_type, counter: &mut usize| -> anyhow::Result<()> {
-				file_path.rename(file_type, *counter, mode)?;
+		for (file_path, kind) in entries {
+			let rename = |rename_as: FileType, counter: &mut usize| -> anyhow::Result<()> {
+				file_path.rename(rename_as, *counter, mode)?;
 				*counter += 1;
 				Ok(())
 			};
 
-			match file_type {
-				FileType::Photo if file_path.is_photo() => {
+			match (file_type, kind) {
+				(FileType::Photo | FileType::All, DetectedKind::Photo) => {
 					rename(FileType::Photo, &mut img_counter)?;
 				}
-				FileType::Video if file_path.is_video() => {
+				(FileType::Video | FileType::All, DetectedKind::Video) => {
 					rename(FileType::Video, &mut vid_counter)?;
 				}
-				FileType::All => {
-					if file_path.is_photo() {
-						rename(FileType::Photo, &mut img_counter)?;
-					} else if file_path.is_video() {
-						rename(FileType::Video, &mut vid_counter)?;
-					}
+				_ => {
+					// it should be unreachable due to filtering - do not panic
+					log::warn!("Skipping unsupported file: {}", file_path.display());
 				}
-				_ => unreachable!("Unexpected match"),
 			}
 		}
 
@@ -228,11 +314,18 @@ impl Renamer for Path {
 
 				// apply changes only when explicitly requested
 				if mode.should_apply() {
-					let new_file_path = parent_path.join(new_file_name);
-					fs::rename(self, &new_file_path)?;
+					let new_file_path = parent_path.join(&new_file_name);
+					fs::rename(self, &new_file_path).with_context(|| {
+						format!(
+							"Failed to rename file '{}' -> '{}'",
+							self.display(),
+							&new_file_path.display()
+						)
+					})?;
 				}
 			}
 		}
+
 		Ok(())
 	}
 

@@ -1,5 +1,5 @@
 use nomen::models::FileType;
-use nomen::renamer::Renamer;
+use nomen::renamer::{DetectedKind, Renamer};
 use std::path::Path;
 use test_case::test_case;
 
@@ -24,7 +24,7 @@ fn test_get_date_from_photo(path_str: &str, expected: &str) {
 }
 
 #[test_case("tests/data/photo_with_exif.jpg", true, false ; "photo file")]
-#[test_case("tests/data/video_with_creation_time.mov", false, true ; "video file")]
+#[test_case("tests/data/video_with_creation_time.mp4", false, true ; "video file")]
 fn test_file_type_detection(path_str: &str, expected_photo: bool, expected_video: bool) {
 	let path = Path::new(path_str);
 	assert_eq!(path.is_photo(), expected_photo, "is_photo failed for {}", path_str);
@@ -36,4 +36,18 @@ fn test_generate_new_name(path_str: &str, file_type: FileType, num: usize, expec
 	let path = Path::new(path_str);
 	let name = path.generate_new_name(file_type, num).unwrap();
 	assert_eq!(name, expected);
+}
+
+#[test_case("tests/data/actually_photo.mp4", true, false, DetectedKind::Photo; "photo content, video extension")]
+#[test_case("tests/data/actually_video.jpg", false, true, DetectedKind::Video; "video content, photo extension")]
+fn test_detect_kind_ignores_wrong_extension(
+	path_str: &str,
+	expected_ext_video: bool,
+	expected_ext_photo: bool,
+	expected_kind: DetectedKind,
+) {
+	let path = Path::new(path_str);
+	assert_eq!(path.extension_is_video(), expected_ext_video);
+	assert_eq!(path.extension_is_photo(), expected_ext_photo);
+	assert_eq!(path.detect_kind(), expected_kind);
 }
